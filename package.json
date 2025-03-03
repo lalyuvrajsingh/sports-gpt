@@ -1,0 +1,36 @@
+{
+  "name": "sports-gpt",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@langchain/langgraph": "^0.2.51",
+    "@langchain/openai": "^0.4.4",
+    "@langchain/pinecone": "^0.2.0",
+    "@pinecone-database/pinecone": "^5.1.0",
+    "ai": "^4.1.47",
+    "axios": "^1.8.1",
+    "langchain": "^0.3.19",
+    "next": "15.2.0",
+    "perplexity": "^1.0.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "vercel": "^41.3.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.2.0",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
