@@ -5,10 +5,12 @@
 
 // Environment variables with fallbacks for development
 export const config = {
-  // OpenAI Configuration
-  openai: {
-    apiKey: process.env.OPENAI_API_KEY || '',
-    model: process.env.OPENAI_MODEL || 'gpt-4o',
+  // LLM Configuration (using Groq through OpenAI interface)
+  llm: {
+    apiKey: process.env.GROQ_API_KEY || '',
+    model: 'llama-3.3-70b-versatile',
+    temperature: 0.7,
+    maxTokens: 8192,
   },
   
   // Perplexity Configuration for Sonar API
@@ -33,15 +35,13 @@ export const config = {
   app: {
     name: 'Sports GPT',
     description: 'Sports-specific GPT with real-time updates and in-depth analysis',
-    maxTokens: 8192,
-    temperature: 0.7,
   },
 };
 
 // Validate critical configuration
 export function validateConfig() {
   const requiredVars = [
-    { key: 'openai.apiKey', value: config.openai.apiKey },
+    { key: 'llm.apiKey', value: config.llm.apiKey },
     { key: 'perplexity.apiKey', value: config.perplexity.apiKey },
     { key: 'pinecone.apiKey', value: config.pinecone.apiKey },
     { key: 'pinecone.environment', value: config.pinecone.environment },

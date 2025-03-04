@@ -1,4 +1,4 @@
-import { Message, StreamingTextResponse, createStreamableUI } from 'ai';
+import { Message } from 'ai';
 import { validateConfig } from '@/src/lib/config';
 import { runCricketAgent } from '@/src/lib/agents/cricket-agent';
 import { AIMessage, HumanMessage } from '@langchain/core/messages';
@@ -51,12 +51,6 @@ export async function POST(req: Request) {
     // Convert previous messages to LangChain format
     const previousMessages = convertMessagesToLangChain(messages.slice(0, -1));
     
-    // Create a streaming UI response
-    const ui = createStreamableUI();
-    
-    // Add the thinking indicator
-    ui.update(<div className="thinking">Thinking...</div>);
-    
     // Run the cricket agent and get the response
     const responseMessages = await runCricketAgent(lastMessage.content, previousMessages);
     
@@ -66,19 +60,15 @@ export async function POST(req: Request) {
       throw new Error('Failed to get AI response');
     }
     
-    // Update the UI with the final response and remove the thinking indicator
-    ui.update(<div className="response">{aiResponse.content}</div>);
-    ui.done();
+    // Convert the response to a string if it's a complex message
+    const responseText = typeof aiResponse.content === 'string' 
+      ? aiResponse.content 
+      : JSON.stringify(aiResponse.content);
     
-    // Create and return a streaming response
-    const stream = new ReadableStream({
-      start(controller) {
-        controller.enqueue(aiResponse.content);
-        controller.close();
-      },
+    // Return the response as a standard Response object
+    return new Response(responseText, {
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
     });
-    
-    return new StreamingTextResponse(stream, {}, ui);
   } catch (error: any) {
     console.error('Error in chat API:', error);
     return new Response(JSON.stringify({ error: error.message || 'An error occurred' }), {
