@@ -1,79 +1,61 @@
-import { Message } from 'ai';
-import { validateConfig } from '@/src/lib/config';
-import { runCricketAgent } from '@/src/lib/agents/cricket-agent';
-import { AIMessage, HumanMessage } from '@langchain/core/messages';
+import { NextResponse } from 'next/server';
+import { Message, StreamingTextResponse } from 'ai';
+import { perplexityClient } from '@/src/lib/api/perplexity';
 
 export const runtime = 'edge';
 
 /**
- * Convert chat messages from the AI SDK format to LangChain format
- */
-function convertMessagesToLangChain(messages: Message[]) {
-  return messages.map(message => {
-    if (message.role === 'user') {
-      return new HumanMessage(message.content);
-    } else if (message.role === 'assistant') {
-      return new AIMessage(message.content);
-    }
-    // Skip system messages for now
-    return null;
-  }).filter(Boolean);
-}
-
-/**
- * API handler for chat requests
+ * The chat route handler - processes incoming chat messages and returns responses
+ * Uses Perplexity Sonar API for accurate cricket information
  */
 export async function POST(req: Request) {
+  console.log('Chat API: Received new request');
+  
   try {
-    // Validate the configuration
-    validateConfig();
-
-    // Parse the incoming request
+    // Parse the request body
     const body = await req.json();
-    const { messages } = body;
+    const messages = body.messages ?? [];
+    const query = messages[messages.length - 1]?.content;
     
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      return new Response(JSON.stringify({ error: 'Invalid messages format' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
+    if (!query || typeof query !== 'string') {
+      return NextResponse.json(
+        { error: 'Invalid query provided' },
+        { status: 400 }
+      );
+    }
+    
+    console.log(`Chat API: Processing query: "${query}"`);
+    
+    try {
+      // Get the result from Perplexity
+      console.log("Directly querying Perplexity Sonar API...");
+      const result = await perplexityClient.directSonarQuery(query);
+      console.log("Response from Perplexity:", result.substring(0, 100) + "...");
+      
+      // Create a properly formatted text response for AI SDK
+      const textEncoder = new TextEncoder();
+      const fakeStream = new ReadableStream({
+        async start(controller) {
+          controller.enqueue(textEncoder.encode(result));
+          controller.close();
+        },
       });
-    }
-    
-    // Get the latest user message
-    const lastMessage = messages[messages.length - 1];
-    if (lastMessage.role !== 'user') {
-      return new Response(JSON.stringify({ error: 'Last message must be from the user' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
+
+      // Use the Vercel AI's StreamingTextResponse with the correct content type
+      return new StreamingTextResponse(fakeStream, {
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+        },
       });
+    } catch (error) {
+      console.error("Error querying Perplexity Sonar API:", error);
+      return NextResponse.json(
+        { error: "Failed to get information from Perplexity API" },
+        { status: 500 }
+      );
     }
-    
-    // Convert previous messages to LangChain format
-    const previousMessages = convertMessagesToLangChain(messages.slice(0, -1));
-    
-    // Run the cricket agent and get the response
-    const responseMessages = await runCricketAgent(lastMessage.content, previousMessages);
-    
-    // Get the latest AI message (the response)
-    const aiResponse = responseMessages[responseMessages.length - 1];
-    if (!aiResponse || !(aiResponse instanceof AIMessage)) {
-      throw new Error('Failed to get AI response');
-    }
-    
-    // Convert the response to a string if it's a complex message
-    const responseText = typeof aiResponse.content === 'string' 
-      ? aiResponse.content 
-      : JSON.stringify(aiResponse.content);
-    
-    // Return the response as a standard Response object
-    return new Response(responseText, {
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-    });
-  } catch (error: any) {
-    console.error('Error in chat API:', error);
-    return new Response(JSON.stringify({ error: error.message || 'An error occurred' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+  } catch (error) {
+    console.error("Error in chat API route:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 } 

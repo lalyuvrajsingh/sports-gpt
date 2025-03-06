@@ -117,20 +117,63 @@ export const getMatchScorecardTool = new DynamicStructuredTool({
 });
 
 /**
- * Tool to research cricket information using Perplexity
+ * Tool to research cricket information using Perplexity Sonar
  */
 export const researchCricketTool = new DynamicStructuredTool({
   name: 'research-cricket-information',
-  description: 'Research real-time information about cricket using Perplexity Sonar API',
+  description: 'Research real-time information about cricket using Perplexity Sonar API. Use for general cricket facts and current information.',
   schema: z.object({
     query: z.string().describe('The cricket-related query to research'),
   }),
   func: async ({ query }) => {
     try {
+      console.log(`Using Sonar API to research: "${query}"`);
       const researchResults = await perplexityClient.research(query);
-      return JSON.stringify(researchResults);
+      
+      // Format the response with sources for better readability
+      const formattedResponse = {
+        answer: researchResults.answer,
+        sources: researchResults.sources.map(source => ({
+          title: source.title,
+          url: source.url,
+        })),
+      };
+      
+      return JSON.stringify(formattedResponse);
     } catch (error) {
+      console.error('Error in research cricket tool:', error);
       return `Error researching cricket information: ${error}`;
+    }
+  }
+});
+
+/**
+ * Tool to perform deep research on cricket topics using Perplexity Sonar Pro
+ */
+export const deepResearchCricketTool = new DynamicStructuredTool({
+  name: 'deep-research-cricket',
+  description: 'Perform in-depth research on complex cricket topics using Sonar Pro. Use when detailed analysis, statistics, or comprehensive information is required.',
+  schema: z.object({
+    query: z.string().describe('The detailed cricket-related query to research in depth'),
+  }),
+  func: async ({ query }) => {
+    try {
+      console.log(`Using Sonar Pro API for deep research: "${query}"`);
+      const researchResults = await perplexityClient.researchDetailed(query);
+      
+      // Format the response with sources for better readability
+      const formattedResponse = {
+        answer: researchResults.answer,
+        sources: researchResults.sources.map(source => ({
+          title: source.title,
+          url: source.url,
+        })),
+      };
+      
+      return JSON.stringify(formattedResponse);
+    } catch (error) {
+      console.error('Error in deep research cricket tool:', error);
+      return `Error performing deep research on cricket information: ${error}`;
     }
   }
 });
@@ -144,4 +187,5 @@ export const cricketTools = [
   getMatchDetailsTool,
   getMatchScorecardTool,
   researchCricketTool,
+  deepResearchCricketTool,
 ]; 

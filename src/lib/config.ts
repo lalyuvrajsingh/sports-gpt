@@ -8,9 +8,22 @@ export const config = {
   // LLM Configuration (using Groq through OpenAI interface)
   llm: {
     apiKey: process.env.GROQ_API_KEY || '',
-    model: 'llama-3.3-70b-versatile',
+    model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
     temperature: 0.7,
     maxTokens: 8192,
+  },
+  
+  // Groq configuration for embeddings and other API calls
+  groq: {
+    apiKey: process.env.GROQ_API_KEY || '',
+    baseUrl: 'https://api.groq.com/openai/v1',
+  },
+  
+  // OpenAI Configuration (fallback for embeddings)
+  openai: {
+    apiKey: process.env.OPENAI_API_KEY || process.env.GROQ_API_KEY || '',  // Fallback to Groq for compatibility
+    model: process.env.OPENAI_MODEL || 'gpt-4',
+    baseUrl: process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
   },
   
   // Perplexity Configuration for Sonar API

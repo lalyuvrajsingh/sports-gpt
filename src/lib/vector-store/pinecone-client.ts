@@ -1,7 +1,10 @@
 import { Pinecone } from '@pinecone-database/pinecone';
-import { OpenAIEmbeddings } from '@langchain/openai';
 import { PineconeStore } from '@langchain/pinecone';
 import config from '../config';
+import { GroqEmbeddings } from '../embeddings/groq-embeddings';
+
+// Set the dimension for sports-gpt-index
+const SPORTS_INDEX_DIMENSION = 3072;
 
 /**
  * Initializes the Pinecone client for vector storage
@@ -9,30 +12,75 @@ import config from '../config';
  */
 export const initPinecone = async () => {
   try {
+    // Initialize Pinecone client
     const pinecone = new Pinecone({
       apiKey: config.pinecone.apiKey,
       environment: config.pinecone.environment,
     });
 
-    // Get or create the index 
     const indexName = config.pinecone.indexName;
     
-    const indexes = await pinecone.listIndexes();
+    // List all indexes to check if our index exists
+    const indexList = await pinecone.listIndexes();
+    console.log("Available indexes:", indexList);
     
-    if (!indexes.some(index => index.name === indexName)) {
-      console.log(`Creating Pinecone index ${indexName}...`);
-      await pinecone.createIndex({
-        name: indexName,
-        dimension: 1536, // OpenAI embeddings dimension
-        metric: 'cosine',
-      });
-      
-      // Wait for index to be initialized
-      await new Promise(resolve => setTimeout(resolve, 60000));
+    let indexExists = false;
+    let currentDimension = SPORTS_INDEX_DIMENSION; // Default dimension for new index
+    
+    if (indexList && Array.isArray(indexList)) {
+      const existingIndex = indexList.find(idx => idx.name === indexName);
+      if (existingIndex) {
+        indexExists = true;
+        currentDimension = existingIndex.dimension;
+        console.log(`Found index ${indexName} with dimension ${currentDimension}`);
+      }
+    } else if (indexList && typeof indexList === 'object' && indexList.indexes) {
+      // Handle case where listIndexes returns object with indexes property
+      const existingIndex = indexList.indexes.find(idx => idx.name === indexName);
+      if (existingIndex) {
+        indexExists = true;
+        currentDimension = existingIndex.dimension;
+        console.log(`Found index ${indexName} with dimension ${currentDimension}`);
+      }
     }
     
-    const index = pinecone.index(indexName);
+    if (indexExists) {
+      console.log(`Using existing Pinecone index ${indexName} with dimension ${currentDimension}`);
+    } else {
+      // Index doesn't exist, create it
+      console.log(`Creating Pinecone index ${indexName} with dimension ${SPORTS_INDEX_DIMENSION}...`);
+      
+      try {
+        // Create index with starter spec (free tier)
+        await pinecone.createIndex({
+          name: indexName,
+          dimension: SPORTS_INDEX_DIMENSION, // Dimension matching our embeddings
+          metric: 'cosine',
+          spec: {
+            serverless: {
+              cloud: 'aws',
+              region: 'us-east-1'
+            }
+          }
+        });
+        
+        // Wait for index to be initialized
+        console.log('Waiting for index to be ready...');
+        await new Promise(resolve => setTimeout(resolve, 30000));
+        
+        console.log(`Pinecone index ${indexName} created successfully`);
+      } catch (createError) {
+        // If index was created concurrently or already exists
+        if (createError.name === 'PineconeConflictError') {
+          console.log('Index was created concurrently, using existing index');
+        } else {
+          throw createError;
+        }
+      }
+    }
     
+    // Get the index without using potentially deprecated methods
+    const index = pinecone.index(indexName);
     return index;
   } catch (error) {
     console.error('Error initializing Pinecone:', error);
@@ -42,21 +90,20 @@ export const initPinecone = async () => {
 
 /**
  * Creates a vector store for storing and retrieving sports knowledge
+ * Using Groq for embeddings generation
  */
 export const createVectorStore = async () => {
   try {
     const index = await initPinecone();
-    const embeddings = new OpenAIEmbeddings({
-      openAIApiKey: config.openai.apiKey,
-      modelName: 'text-embedding-3-small',
-    });
+    
+    // Initialize custom Groq embeddings
+    const embeddings = new GroqEmbeddings();
 
-    const vectorStore = await PineconeStore.fromExistingIndex(embeddings, {
+    // Create vector store
+    return await PineconeStore.fromExistingIndex(embeddings, {
       pineconeIndex: index,
-      namespace: 'sports-knowledge',
+      namespace: 'sports',
     });
-
-    return vectorStore;
   } catch (error) {
     console.error('Error creating vector store:', error);
     throw error;

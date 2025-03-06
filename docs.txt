@@ -1,0 +1,54 @@
+System Architecture
+
+User Query --> LLM (groq API(llama-3.3-70b-versatile)) --> Agent Orchestration
+                     ^
+                     |
+                     v
+      ┌─────────────┴─────────────┐
+      │                           │
+  Retrieval       Tools         Memory
+      │             │             │
+ Pinecone      Sports APIs    Pinecone
+ (Knowledge)                 (Session)
+
+
+Components Breakdown:
+1. LLM Layer (OpenAI)
+- Acts as the core reasoning engine
+- Handles natural language understanding
+- Generates human-like responses
+
+2. Agent Orchestration (LangGraph)
+- Coordinates the flow between different tools and data sources
+- Makes decisions on which tools to use based on query type
+- Maintains conversation context
+
+3. Tools Layer
+- Sports Data APIs: For real-time scores, statistics, and player data
+- Perplexity Sonar API: For general research and supplementary information
+- Custom Tools: For specific sports analysis tasks
+
+4. Retrieval Layer
+- Pinecone Vector DB: Stores embeddings of sports knowledge
+- Enables semantic search for relevant information
+
+5. Memory Layer
+- Conversation Memory: Maintains context of ongoing conversations
+- Long-term Storage: Saves useful information for future interactions
+
+
+Data Flow Process
+User submits a query (e.g., "Total number of last over bowled by Jasprit in IPL")
+The LLM processes the query and determines intent
+LangGraph orchestrator decides which tools/APIs to call:
+Sports statistics query → Sports Data API
+Contextual information → Pinecone retrieval
+General sports news → Perplexity Sonar API
+Data from various sources is collected and passed back to the LLM
+LLM generates a comprehensive response and returns it to the user
+Conversation history is stored in memory for context in future queries
+
+
+Expected output
+1. output should be in detail, should utilise sonar for the in detailed outputs. docs - https://docs.perplexity.ai/guides/getting-started
+2. output should be realtime, should use other sports api providers for realitime data. 
