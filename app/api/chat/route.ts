@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import { Message, StreamingTextResponse } from 'ai';
-import { perplexityClient } from '@/src/lib/api/perplexity';
+import { openaiClient } from '@/src/lib/api/openai';
 
 export const runtime = 'edge';
 
 /**
  * The chat route handler - processes incoming chat messages and returns responses
- * Uses Perplexity Sonar API for accurate cricket information
+ * Uses OpenAI GPT-4o for accurate cricket information
  */
 export async function POST(req: Request) {
   console.log('Chat API: Received new request');
@@ -27,30 +27,22 @@ export async function POST(req: Request) {
     console.log(`Chat API: Processing query: "${query}"`);
     
     try {
-      // Get the result from Perplexity
-      console.log("Directly querying Perplexity Sonar API...");
-      const result = await perplexityClient.directSonarQuery(query);
-      console.log("Response from Perplexity:", result.substring(0, 100) + "...");
+      // Get the result from OpenAI GPT-4o
+      console.log("Querying OpenAI GPT-4o...");
+      const result = await openaiClient.getCricketInfo(query);
+      console.log("Response from OpenAI:", result.substring(0, 100) + "...");
       
-      // Create a properly formatted text response for AI SDK
-      const textEncoder = new TextEncoder();
-      const fakeStream = new ReadableStream({
-        async start(controller) {
-          controller.enqueue(textEncoder.encode(result));
-          controller.close();
-        },
-      });
-
-      // Use the Vercel AI's StreamingTextResponse with the correct content type
-      return new StreamingTextResponse(fakeStream, {
+      // Use the Vercel AI's StreamingTextResponse with simple response handling
+      // Avoiding complex browser APIs like TextEncoder and ReadableStream in Edge runtime
+      return new Response(result, {
         headers: {
           'Content-Type': 'text/plain; charset=utf-8',
         },
       });
     } catch (error) {
-      console.error("Error querying Perplexity Sonar API:", error);
+      console.error("Error querying OpenAI API:", error);
       return NextResponse.json(
-        { error: "Failed to get information from Perplexity API" },
+        { error: "Failed to get information from OpenAI API" },
         { status: 500 }
       );
     }

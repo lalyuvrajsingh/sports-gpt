@@ -23,4 +23,187 @@ body {
   color: rgb(var(--foreground-rgb));
   background: rgb(var(--background-rgb));
   font-family: Arial, Helvetica, sans-serif;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(63, 63, 70, 0.5) transparent;
+}
+
+/* Custom scrollbar for Webkit browsers */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(63, 63, 70, 0.5);
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(63, 63, 70, 0.8);
+}
+
+/* Enhanced table styles */
+.prose table {
+  width: 100%;
+  table-layout: auto;
+  text-align: left;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.prose tr {
+  border-bottom-width: 1px;
+  border-bottom-color: rgba(63, 63, 70, 0.5);
+}
+
+.prose th {
+  background-color: rgba(39, 39, 42, 0.7);
+  font-weight: 500;
+  padding: 0.75rem 1rem;
+}
+
+.prose td {
+  padding: 0.75rem 1rem;
+}
+
+/* Enhanced code block styles */
+.prose pre {
+  margin: 0;
+  padding: 1rem;
+  overflow-x: auto;
+  border-radius: 0.5rem;
+  background-color: rgba(39, 39, 42, 0.7);
+  color: #e4e4e7;
+  font-family: monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.prose pre code {
+  background-color: transparent;
+  border-width: 0;
+  border-radius: 0;
+  padding: 0;
+  color: inherit;
+  line-height: inherit;
+}
+
+/* Cricket table specific styles */
+.cricket-stats-table {
+  width: 100%;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  border-collapse: collapse;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+  border: 1px solid rgba(63, 63, 70, 0.5);
+}
+
+.cricket-stats-table th {
+  background-color: rgba(29, 78, 216, 0.2);
+  color: #e4e4e7;
+  font-weight: 500;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(63, 63, 70, 0.5);
+}
+
+.cricket-stats-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(63, 63, 70, 0.2);
+  color: #a1a1aa;
+}
+
+.cricket-stats-table tr:hover td {
+  background-color: rgba(63, 63, 70, 0.2);
+}
+
+@layer utilities {
+  /* Add animations for UI elements */
+  .animate-fadeIn {
+    animation: fadeIn 0.5s ease-in-out forwards;
+  }
+  
+  .animate-slideUp {
+    animation: slideUp 0.4s ease-out forwards;
+  }
+  
+  .animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  /* Make text selectable by double-click */
+  .text-select-all {
+    user-select: all;
+  }
+  
+  /* Gradient text utility */
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-blue-600;
+  }
+  
+  /* Glass effect for UI elements */
+  .glass-effect {
+    @apply backdrop-blur-md bg-zinc-800/40 border border-zinc-700/50;
+  }
+  
+  /* Line clamp utilities */
+  .line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+  
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
 }

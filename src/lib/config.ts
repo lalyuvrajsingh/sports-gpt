@@ -7,8 +7,8 @@
 export const config = {
   // LLM Configuration (using Groq through OpenAI interface)
   llm: {
-    apiKey: process.env.GROQ_API_KEY || '',
-    model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
+    apiKey: process.env.OPENAI_API_KEY || process.env.GROQ_API_KEY || '',
+    model: process.env.OPENAI_MODEL || 'gpt-4o',
     temperature: 0.7,
     maxTokens: 8192,
   },
@@ -19,10 +19,10 @@ export const config = {
     baseUrl: 'https://api.groq.com/openai/v1',
   },
   
-  // OpenAI Configuration (fallback for embeddings)
+  // OpenAI Configuration (primary model)
   openai: {
-    apiKey: process.env.OPENAI_API_KEY || process.env.GROQ_API_KEY || '',  // Fallback to Groq for compatibility
-    model: process.env.OPENAI_MODEL || 'gpt-4',
+    apiKey: process.env.OPENAI_API_KEY || '',
+    model: process.env.OPENAI_MODEL || 'gpt-4o', // Default to GPT-4o
     baseUrl: process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
   },
   
@@ -54,8 +54,7 @@ export const config = {
 // Validate critical configuration
 export function validateConfig() {
   const requiredVars = [
-    { key: 'llm.apiKey', value: config.llm.apiKey },
-    { key: 'perplexity.apiKey', value: config.perplexity.apiKey },
+    { key: 'openai.apiKey', value: config.openai.apiKey }, // Changed from llm.apiKey to openai.apiKey
     { key: 'pinecone.apiKey', value: config.pinecone.apiKey },
     { key: 'pinecone.environment', value: config.pinecone.environment },
     { key: 'sportsApi.apiKey', value: config.sportsApi.apiKey },

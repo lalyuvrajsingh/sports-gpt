@@ -6,16 +6,22 @@ import { GroqEmbeddings } from '../embeddings/groq-embeddings';
 // Set the dimension for sports-gpt-index
 const SPORTS_INDEX_DIMENSION = 3072;
 
+// Type for Pinecone error
+interface PineconeError extends Error {
+  name: string;
+  status?: number;
+  message: string;
+}
+
 /**
  * Initializes the Pinecone client for vector storage
  * This is used for semantic search and knowledge retrieval
  */
 export const initPinecone = async () => {
   try {
-    // Initialize Pinecone client
+    // Initialize Pinecone client with the latest SDK (no environment property)
     const pinecone = new Pinecone({
       apiKey: config.pinecone.apiKey,
-      environment: config.pinecone.environment,
     });
 
     const indexName = config.pinecone.indexName;
@@ -69,12 +75,15 @@ export const initPinecone = async () => {
         await new Promise(resolve => setTimeout(resolve, 30000));
         
         console.log(`Pinecone index ${indexName} created successfully`);
-      } catch (createError) {
+      } catch (error: unknown) {
+        // Properly type the error
+        const pineconeError = error as PineconeError;
+        
         // If index was created concurrently or already exists
-        if (createError.name === 'PineconeConflictError') {
+        if (pineconeError.name === 'PineconeConflictError') {
           console.log('Index was created concurrently, using existing index');
         } else {
-          throw createError;
+          throw error;
         }
       }
     }

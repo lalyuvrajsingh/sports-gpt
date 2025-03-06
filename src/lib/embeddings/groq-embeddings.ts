@@ -6,12 +6,13 @@ import config from "../config";
  * Custom embeddings class that uses Groq's LLM to generate embeddings
  * This is a workaround since Groq doesn't offer a dedicated embeddings API
  */
-export class GroqEmbeddings implements Embeddings {
+export class GroqEmbeddings extends Embeddings {
   private model: ChatGroq;
   private dimension: number;
   private cache: Map<string, number[]>;
 
   constructor() {
+    super({});
     this.model = new ChatGroq({
       apiKey: config.groq.apiKey,
       modelName: config.llm.model || "llama-3.3-70b-versatile", // Use the same LLM as the main application
@@ -53,7 +54,7 @@ Text: ${text}`;
       const content = response.content.toString().trim();
       
       // Extract the JSON array from the response
-      const jsonMatch = content.match(/\[.*\]/s);
+      const jsonMatch = content.match(/\[(.*)\]/);
       if (!jsonMatch) {
         console.error("Failed to extract vector. Model response:", content);
         throw new Error("Failed to extract vector from response");
