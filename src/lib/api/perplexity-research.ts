@@ -6,6 +6,14 @@ interface Source {
   snippet: string;
 }
 
+interface ImageSource {
+  url: string;
+  origin?: string;
+  height?: number;
+  width?: number;
+  context?: string;
+}
+
 interface SonarResearchResponse {
   id: string;
   model: string;
@@ -36,6 +44,7 @@ interface SonarResearchResponse {
       origin?: string;
       height?: number;
       width?: number;
+      title?: string;
     }[];
   };
   search_queries?: string[];
@@ -49,19 +58,50 @@ class PerplexityResearchClient {
   private apiKey: string;
   private baseUrl = 'https://api.perplexity.ai';
   private model = 'sonar-deep-research'; // Using the most comprehensive research model
-  private systemPrompt = `You are CricketResearchGPT, a specialized research assistant focused on providing in-depth, comprehensive cricket information.
+  private systemPrompt = `You are CricketGPT, a specialized cricket analysis engine that conducts comprehensive research on cricket-related topics.
 
-Follow these research guidelines:
-1. Conduct exhaustive research on the cricket query using multiple high-quality sources.
-2. Include the latest statistics, historical context, and current information.
-3. Structure your response with clear sections using markdown headings and lists.
-4. For statistical data, use tables to present information clearly.
-5. Always cite your sources with links when providing factual information.
-6. Be comprehensive - your research should be thorough and detailed.
-7. Focus on accuracy and recency of information - include dates for time-sensitive data.
-8. For player statistics, include complete career information where relevant.
+RESEARCH APPROACH:
+1. Conduct exhaustive multi-source research on cricket queries
+2. Emphasize statistical accuracy with precise numbers and dates 
+3. Provide detailed player/team/match analysis with recent performance trends
+4. Include historical context and current developments
+5. Uncover lesser-known cricket facts and advanced analytics when relevant
+6. Include URLs to high-quality images of players, teams, venues, and charts/graphics
+7. Actively search for and provide visual content that enhances the information
 
-Your output should be properly formatted with sections, statistics, and sources that provide a complete research report on the cricket-related question.`;
+OUTPUT STRUCTURE:
+1. Begin with a concise 2-3 sentence summary of the key findings
+2. Organize content with clear markdown headings (##, ###) and bullet points
+3. Present statistics in formatted tables for readability
+4. For player profiles, include career stats AND recent form (last 1-2 years)
+5. For match/tournament analysis, include venue conditions and historical performance data
+6. When discussing cricket records, provide context about when/how they were set
+7. Always include pre-formatted tables for statistical data
+8. When relevant, indicate which entities (players, teams) should have images displayed
+
+VISUAL CONTENT GUIDELINES:
+1. Include URLs to high-quality images of relevant cricket players
+2. Provide images of stadiums or venues when discussing specific matches
+3. Include statistical charts or visualizations when available
+4. For player rankings or comparisons, provide image URLs for all top players
+5. Include team logos or emblems when discussing teams or tournaments
+6. Tag images with proper context (e.g., "Virat Kohli batting stance", "Wankhede Stadium aerial view")
+
+STYLISTIC ELEMENTS:
+1. Write with authority but accessible to both casual fans and cricket experts
+2. Use cricket-specific terminology appropriately with brief explanations of technical terms
+3. Maintain objective tone while highlighting noteworthy achievements
+4. Include relevant direct quotes from players/coaches when available in your sources
+5. End with key takeaways or implications for future matches/tournaments when relevant
+
+ATTRIBUTION AND ACCURACY:
+1. Cite sources inline (e.g., "According to ESPN Cricinfo...")
+2. Include full URLs for key statistical sources
+3. Note when information conflicts between sources and explain discrepancies
+4. For time-sensitive information, include publication dates
+5. Distinguish between factual information and analytical interpretations
+6. Label predictions or speculations clearly
+7. Provide attribution for all images and visualizations used`;
 
   constructor() {
     this.apiKey = config.perplexity.apiKey;
@@ -81,6 +121,7 @@ Your output should be properly formatted with sections, statistics, and sources 
   async conductResearch(query: string): Promise<{
     content: string;
     sources: Source[];
+    images?: ImageSource[];
     searchQueries?: string[];
   }> {
     const startTime = Date.now();
@@ -168,6 +209,19 @@ Your output should be properly formatted with sections, statistics, and sources 
       })) || [];
       console.log(`[PerplexityClient] Sources extracted (${sources.length} sources)`);
       
+      // Extract and format images
+      const images: ImageSource[] = data.citations?.images?.map(image => ({
+        url: image.url,
+        origin: image.origin,
+        height: image.height,
+        width: image.width,
+        context: image.title || this.extractImageContext(image.url)
+      })) || [];
+      console.log(`[PerplexityClient] Images extracted (${images.length} images)`);
+      if (images.length > 0) {
+        console.log(`[PerplexityClient] Sample image URLs: ${images.slice(0, 2).map(img => img.url).join(', ')}${images.length > 2 ? '...' : ''}`);
+      }
+      
       // Extract search queries if available
       const searchQueries = data.search_queries || [];
       console.log(`[PerplexityClient] Search queries extracted (${searchQueries.length} queries)`);
@@ -182,11 +236,15 @@ Your output should be properly formatted with sections, statistics, and sources 
       
       // Log successful research
       const totalTime = (Date.now() - startTime) / 1000;
-      console.log(`[PerplexityClient] Successfully completed deep research in ${totalTime.toFixed(2)}s (${content.length} chars, ${sources.length} sources, ${searchQueries.length} search queries)`);
+      console.log(`[PerplexityClient] Successfully completed deep research in ${totalTime.toFixed(2)}s (${content.length} chars, ${sources.length} sources, ${images.length} images, ${searchQueries.length} search queries)`);
+      
+      // Filter out the content
+      const filteredContent = this.filterInternalContent(content);
       
       return {
-        content,
+        content: filteredContent,
         sources,
+        images,
         searchQueries
       };
     } catch (error: unknown) {
@@ -200,14 +258,16 @@ Your output should be properly formatted with sections, statistics, and sources 
         console.error(`[PerplexityClient] Research timed out after ${totalTime.toFixed(2)}s (${TIMEOUT_MS/1000}s limit)`);
         return {
           content: `I'm sorry, but the deep research is taking longer than expected. Cricket research requires analyzing multiple sources and compiling detailed information. Please try a more specific question about cricket for faster results.`,
-          sources: []
+          sources: [],
+          images: []
         };
       }
       
       console.error("[PerplexityClient] Error in research:", error);
       return {
         content: `I encountered an error while conducting deep research on your cricket question. This might be due to API limits or connectivity issues. Please try again later or refine your question to be more specific.`,
-        sources: []
+        sources: [],
+        images: []
       };
     }
   }
@@ -218,12 +278,82 @@ Your output should be properly formatted with sections, statistics, and sources 
    * @returns Enhanced query with additional context
    */
   private enhanceQuery(query: string): string {
-    // Only enhance if the query doesn't explicitly mention cricket
-    if (!query.toLowerCase().includes('cricket')) {
-      return `Conduct in-depth cricket research on: ${query}\n\nPlease provide comprehensive information, including latest statistics, historical context, and current developments.`;
+    // Basic cricket terminology check
+    const hasCricketTerms = /\b(cricket|ipl|odi|t20|test match|batsman|bowler|wicket|run|over|innings|century|captain|icc|bcci|cricketer)\b/i.test(query);
+    
+    // If it clearly mentions cricket already, enhance the query for depth
+    if (hasCricketTerms) {
+      return `${query}
+      
+Please provide comprehensive cricket analysis with:
+1. Latest statistics and records as of 2024
+2. Historical context and significance
+3. Statistical tables and trends
+4. Expert analysis from credible cricket sources
+5. Quotes from players/coaches when relevant
+6. Both career overview and recent form for players
+7. Multiple perspectives on debated topics
+8. URLs to high-quality images of relevant players/teams/venues
+9. Suggestions for visual elements to display alongside the analysis
+10. Links to charts, graphs, or infographics that illustrate key statistics
+
+For any players, teams, or venues mentioned, please include image URLs that can be displayed alongside the text content. For statistical comparisons, include visual data that can be rendered as charts.`;
     }
     
-    return `${query}\n\nPlease provide comprehensive information, including latest statistics, historical context, and current developments.`;
+    // If cricket isn't mentioned, assume it's a cricket query needing context
+    return `Conduct in-depth cricket research on: ${query}
+
+Please provide comprehensive cricket analysis that includes:
+1. Latest statistics and records as of 2024
+2. Historical context and trends 
+3. Properly formatted statistical tables
+4. Expert opinions from credible cricket sources
+5. Analysis of both career statistics and recent performance
+6. Multiple perspectives when addressing subjective questions
+7. Relevant comparisons to similar players/teams/matches
+8. URLs to high-quality images of key entities (players/teams/venues) mentioned
+9. Image URLs for top players discussed in the analysis
+10. Links to statistical visualizations or charts that enhance understanding
+
+For any players, teams, or venues that are central to the analysis, please include image URLs that we can display alongside the content. For rankings or statistics, include visual elements that help illustrate the data.`;
+  }
+  
+  /**
+   * Extracts context from image URL when title is not provided
+   * @param url The image URL
+   * @returns Extracted context or empty string
+   */
+  private extractImageContext(url: string): string {
+    try {
+      // Extract filename from URL
+      const filename = url.split('/').pop() || '';
+      
+      // Remove extension and replace dashes/underscores with spaces
+      let context = filename.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+      
+      // Capitalize first letter of each word
+      context = context.replace(/\b\w/g, char => char.toUpperCase());
+      
+      return context || 'Cricket Image';
+    } catch (e) {
+      return 'Cricket Image';
+    }
+  }
+  
+  // Add a method to filter out <think> tags from the content
+  private filterInternalContent(content: string): string {
+    if (!content) return '';
+    
+    // Filter out <think>...</think> sections which contain internal instructions
+    const thinkTagRegex = /<think>[\s\S]*?<\/think>/;
+    const cleanedContent = content.replace(thinkTagRegex, '').trim();
+    
+    // If after filtering, content is empty, return a message
+    if (!cleanedContent) {
+      return 'No displayable content was found in the research results.';
+    }
+    
+    return cleanedContent;
   }
 }
 

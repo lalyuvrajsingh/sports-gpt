@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { FiExternalLink, FiChevronDown, FiChevronUp, FiSearch, FiBookOpen, FiMaximize2, FiMinimize2, FiX } from 'react-icons/fi';
 import ReactMarkdown from 'react-markdown';
-import rehypeRaw from 'rehype-raw';
+import remarkGfm from 'remark-gfm';
+import { FiExternalLink, FiChevronDown, FiChevronUp, FiInfo } from 'react-icons/fi';
 
 interface Source {
   title: string;
@@ -14,7 +14,9 @@ interface Source {
 interface ResearchResultsProps {
   content: string;
   sources: Source[];
+  images?: any[]; // Keep this for compatibility but won't use it
   searchQueries?: string[];
+  query: string;
 }
 
 /**
@@ -22,191 +24,205 @@ interface ResearchResultsProps {
  */
 export default function ResearchResults({ 
   content, 
-  sources, 
-  searchQueries = [] 
+  sources = [], // Ensure sources has a default value
+  images = [],
+  searchQueries = [],
+  query = ''
 }: ResearchResultsProps) {
-  const [showSources, setShowSources] = useState(false);
-  const [showSearchQueries, setShowSearchQueries] = useState(false);
-  const [fullscreen, setFullscreen] = useState(false);
-
+  const [showAllSources, setShowAllSources] = useState(false);
+  const [showSourcePanel, setShowSourcePanel] = useState(true);
+  const [showRawContent, setShowRawContent] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
+  
+  // Helper to extract domain from URL
+  const getDomain = (url: string) => {
+    try {
+      const domainMatch = url?.match(/^(?:https?:\/\/)?(?:[^@\n]+@)?(?:www\.)?([^:/\n?]+)/im);
+      return domainMatch ? domainMatch[1] : url;
+    } catch (e) {
+      return url || '';
+    }
+  };
+  
+  const visibleSources = showAllSources ? sources : (sources || []).slice(0, 3);
+  
+  // Filter content to remove <think> tags
+  const cleanContent = (rawContent: string) => {
+    if (!rawContent) return '';
+    
+    try {
+      // Remove <think>...</think> sections which are internal instructions
+      const thinkRegex = /<think>[\s\S]*?<\/think>/;
+      return rawContent.replace(thinkRegex, '').trim();
+    } catch (e) {
+      console.error('Error cleaning content:', e);
+      return rawContent;
+    }
+  };
+  
+  if (!content || content.trim() === '') {
+    return (
+      <div className="w-full p-4 border border-red-200 dark:border-red-800 rounded-md bg-red-50 dark:bg-red-900/20">
+        <p className="text-red-700 dark:text-red-300">No research content available.</p>
+      </div>
+    );
+  }
+  
+  const processedContent = cleanContent(content);
+  
   return (
-    <div className={`flex flex-col w-full ${fullscreen ? 'fixed inset-0 z-50 p-3 sm:p-6 bg-black/80 backdrop-blur-sm animate-fadeIn' : 'max-w-4xl mx-auto'}`}>
-      <div className={`bg-gradient-to-b from-zinc-800/90 to-zinc-800/80 backdrop-blur-xl rounded-xl border border-zinc-700/50 ${fullscreen ? 'w-full h-full max-w-6xl mx-auto flex flex-col overflow-hidden' : 'p-4 sm:p-5 shadow-xl'}`}>
-        <div className="flex items-center justify-between border-b border-zinc-700/80 pb-3 mb-3">
-          <div className="flex items-center gap-2">
-            <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-full p-1.5 shadow-md">
-              <FiBookOpen className="text-white" size={16} />
-            </div>
-            <h2 className="text-lg font-semibold bg-gradient-to-r from-blue-400 to-blue-600 text-transparent bg-clip-text">
-              Research Results
-            </h2>
+    <div className="w-full">
+      {/* Debug toggle */}
+      <div className="w-full flex justify-end mb-2">
+        <button 
+          onClick={() => setShowDebug(!showDebug)}
+          className="text-xs px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded flex items-center gap-1"
+        >
+          <FiInfo size={12} /> {showDebug ? 'Hide Debug' : 'Show Debug'}
+        </button>
+        
+        <button 
+          onClick={() => setShowRawContent(!showRawContent)}
+          className="text-xs px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded ml-2"
+        >
+          {showRawContent ? 'Show Formatted' : 'Show Raw'}
+        </button>
+      </div>
+      
+      {/* Debug Info */}
+      {showDebug && (
+        <div className="w-full p-4 mb-4 border border-blue-200 dark:border-blue-800 rounded-md bg-blue-50 dark:bg-blue-900/20 text-xs font-mono">
+          <h3 className="font-bold mb-2">Debug Information:</h3>
+          <ul>
+            <li>Content Length: {content?.length || 0} characters</li>
+            <li>Processed Content Length: {processedContent?.length || 0} characters</li>
+            <li>Sources: {sources?.length || 0}</li>
+            <li>Query: {query || 'N/A'}</li>
+          </ul>
+        </div>
+      )}
+      
+      {/* Main Content */}
+      <div className="w-full">
+        {showRawContent ? (
+          <div className="prose dark:prose-invert w-full max-w-none border border-gray-200 dark:border-gray-700 rounded-md p-4">
+            <h2 className="text-xl font-bold mb-4">Raw Research Results</h2>
+            <pre className="whitespace-pre-wrap bg-gray-100 dark:bg-gray-800 p-4 rounded-md text-sm overflow-auto">
+              {processedContent}
+            </pre>
           </div>
-          <div className="flex space-x-1.5">
-            <button
-              onClick={() => setShowSearchQueries(!showSearchQueries)}
-              className={`flex items-center text-xs p-1.5 rounded-lg transition-colors ${
-                searchQueries.length === 0 
-                  ? 'text-zinc-500 cursor-not-allowed' 
-                  : showSearchQueries 
-                    ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
-                    : 'text-zinc-300 hover:bg-zinc-700/70 hover:text-zinc-100'
-              }`}
-              disabled={searchQueries.length === 0}
-              title={searchQueries.length === 0 ? "No search queries" : "Toggle search queries"}
+        ) : (
+          <div className="prose dark:prose-invert w-full max-w-none">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                h1: ({ children }) => <h1 className="text-2xl font-semibold mb-4">{children}</h1>,
+                h2: ({ children }) => <h2 className="text-xl font-semibold mt-6 mb-3">{children}</h2>,
+                h3: ({ children }) => <h3 className="text-lg font-medium mt-5 mb-2">{children}</h3>,
+                p: ({ children }) => <p className="mb-4 leading-relaxed">{children}</p>,
+                ul: ({ children }) => <ul className="mb-4 pl-6 list-disc">{children}</ul>,
+                ol: ({ children }) => <ol className="mb-4 pl-6 list-decimal">{children}</ol>,
+                li: ({ children }) => <li className="mb-1">{children}</li>,
+                a: ({ href, children }) => (
+                  <a 
+                    href={href} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="text-blue-600 hover:underline"
+                  >
+                    {children}
+                  </a>
+                ),
+                table: ({ children }) => (
+                  <div className="overflow-x-auto my-4 rounded border border-zinc-200 dark:border-zinc-700">
+                    <table className="cricket-stats-table w-full">{children}</table>
+                  </div>
+                ),
+                code: ({ node, className, children, ...props }) => {
+                  // Check if this is an inline code block based on the parent node
+                  const isInline = !className && !props.hasOwnProperty('data-language');
+                  
+                  if (isInline) {
+                    return <code className="px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 rounded text-sm">{children}</code>;
+                  }
+                  return (
+                    <div className="relative mt-4 mb-6">
+                      <pre className="p-4 rounded-md bg-zinc-100 dark:bg-zinc-800 overflow-auto">
+                        <code className={className} {...props}>{children}</code>
+                      </pre>
+                    </div>
+                  );
+                }
+              }}
             >
-              <FiSearch size={14} />
-            </button>
-            <button
-              onClick={() => setShowSources(!showSources)}
-              className={`flex items-center text-xs p-1.5 rounded-lg transition-colors ${
-                sources.length === 0 
-                  ? 'text-zinc-500 cursor-not-allowed' 
-                  : showSources 
-                    ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
-                    : 'text-zinc-300 hover:bg-zinc-700/70 hover:text-zinc-100'
-              }`}
-              disabled={sources.length === 0}
-              title={sources.length === 0 ? "No sources" : "Toggle sources"}
+              {processedContent || ""}
+            </ReactMarkdown>
+          </div>
+        )}
+        
+        {/* Sources Panel - Always show this section even when there are no sources */}
+        <div className="mt-8 border-t border-zinc-200 dark:border-zinc-800 pt-4">
+          <div className="flex items-center justify-between mb-4">
+            <button 
+              onClick={() => setShowSourcePanel(!showSourcePanel)}
+              className="flex items-center gap-1 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100"
             >
-              <FiExternalLink size={14} />
-              <span className="ml-1 hidden sm:inline">{sources.length}</span>
+              Sources {sources && sources.length > 0 ? `(${sources.length})` : '(0)'}
+              {showSourcePanel ? <FiChevronUp size={16} /> : <FiChevronDown size={16} />}
             </button>
-            <button
-              onClick={() => setFullscreen(!fullscreen)}
-              className="flex items-center text-xs p-1.5 rounded-lg text-zinc-300 hover:bg-zinc-700/70 hover:text-zinc-100 transition-colors"
-              title={fullscreen ? "Exit fullscreen" : "View fullscreen"}
-            >
-              {fullscreen ? <FiMinimize2 size={14} /> : <FiMaximize2 size={14} />}
-            </button>
-            {fullscreen && (
+            
+            {sources && sources.length > 3 && showSourcePanel && (
               <button
-                onClick={() => setFullscreen(false)}
-                className="flex items-center text-xs p-1.5 rounded-lg text-zinc-300 hover:bg-zinc-700/70 hover:text-zinc-100 transition-colors sm:hidden"
-                title="Close"
+                onClick={() => setShowAllSources(!showAllSources)}
+                className="text-sm text-blue-600 hover:text-blue-700 dark:hover:text-blue-400 transition-colors"
               >
-                <FiX size={14} />
+                {showAllSources ? 'Show less' : 'View all sources'}
               </button>
             )}
           </div>
-        </div>
-        
-        <div className={`${fullscreen ? 'flex-grow flex flex-col overflow-hidden' : ''}`}>
-          {/* Search Queries Panel */}
-          {showSearchQueries && searchQueries.length > 0 && (
-            <div className="mb-3 p-3 bg-zinc-700/20 border border-zinc-700/50 rounded-lg text-xs animate-fadeIn">
-              <h3 className="text-xs font-medium mb-2 text-blue-300 flex items-center">
-                <FiSearch className="mr-1.5" size={12} />
-                Search Queries
-              </h3>
-              <ul className="space-y-1.5 text-zinc-300">
-                {searchQueries.map((query, index) => (
-                  <li key={index} className="p-1.5 bg-zinc-800/50 rounded-lg border border-zinc-700/30">
-                    "{query}"
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
           
-          {/* Sources Panel */}
-          {showSources && sources.length > 0 && (
-            <div className="mb-3 p-3 bg-zinc-700/20 border border-zinc-700/50 rounded-lg text-xs animate-fadeIn">
-              <h3 className="text-xs font-medium mb-2 text-blue-300 flex items-center">
-                <FiExternalLink className="mr-1.5" size={12} />
-                Sources
-              </h3>
-              <div className={`space-y-2 ${fullscreen ? 'max-h-[20vh]' : 'max-h-40'} overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-zinc-600 scrollbar-track-zinc-800`}>
-                {sources.map((source, index) => (
-                  <div key={index} className="p-2 bg-zinc-800/70 rounded-lg border border-zinc-700/40 hover:border-zinc-600/60 transition-colors">
-                    <div className="flex justify-between items-start">
-                      <h4 className="font-medium text-blue-300 line-clamp-1">{source.title || 'Untitled Source'}</h4>
+          {showSourcePanel && (
+            <div className="space-y-4">
+              {visibleSources && visibleSources.length > 0 ? (
+                visibleSources.map((source, index) => (
+                  <div key={index} className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="font-medium line-clamp-1 text-zinc-900 dark:text-zinc-100">
+                        {source.title}
+                      </h3>
                       <a 
                         href={source.url} 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center bg-blue-600/20 text-blue-400 p-1 rounded-lg hover:bg-blue-600/30 transition-colors ml-1.5"
-                        title="Visit source"
+                        className="text-blue-600 p-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
                       >
-                        <FiExternalLink size={12} />
+                        <FiExternalLink size={16} />
                       </a>
                     </div>
-                    {source.snippet && (
-                      <p className="text-zinc-400 mt-1 text-xs line-clamp-2">{source.snippet}</p>
-                    )}
-                    <div className="mt-1 text-xs text-zinc-500 truncate">{source.url}</div>
+                    <div className="text-sm text-zinc-500 dark:text-zinc-400 mb-2">
+                      {getDomain(source.url)}
+                    </div>
+                    <p className="text-sm text-zinc-700 dark:text-zinc-300 line-clamp-2">
+                      {source.snippet}
+                    </p>
                   </div>
-                ))}
-              </div>
+                ))
+              ) : (
+                <div className="text-sm text-zinc-500 dark:text-zinc-400 p-4 border border-zinc-200 dark:border-zinc-800 rounded-lg">
+                  No sources were provided for this research. The content was generated based on the model's knowledge.
+                </div>
+              )}
+              
+              {!showAllSources && sources && sources.length > 3 && (
+                <button
+                  onClick={() => setShowAllSources(true)}
+                  className="w-full py-2 border border-zinc-200 dark:border-zinc-800 rounded-lg text-center text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-sm font-medium"
+                >
+                  View {sources.length - 3} more sources
+                </button>
+              )}
             </div>
           )}
-          
-          {/* Main Content */}
-          <div className={`prose prose-invert prose-blue prose-sm max-w-none ${fullscreen ? 'flex-grow overflow-y-auto p-2' : 'overflow-auto max-h-[50vh]'} scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-zinc-800 rounded-lg`}>
-            <ReactMarkdown 
-              rehypePlugins={[rehypeRaw]}
-              components={{
-                table: ({ node, ...props }: any) => (
-                  <div className="overflow-x-auto my-2 rounded-lg border border-zinc-700/50">
-                    <table {...props} className="min-w-full divide-y divide-zinc-700/50 text-sm" />
-                  </div>
-                ),
-                thead: ({ node, ...props }: any) => (
-                  <thead {...props} className="bg-zinc-800" />
-                ),
-                tbody: ({ node, ...props }: any) => (
-                  <tbody {...props} className="divide-y divide-zinc-700/50 bg-zinc-800/50" />
-                ),
-                tr: ({ node, ...props }: any) => (
-                  <tr {...props} className="hover:bg-zinc-700/30 transition-colors" />
-                ),
-                th: ({ node, ...props }: any) => (
-                  <th {...props} className="px-3 py-2 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider" />
-                ),
-                td: ({ node, ...props }: any) => (
-                  <td {...props} className="px-3 py-2 whitespace-nowrap text-zinc-400" />
-                ),
-                a: ({ node, ...props }: any) => (
-                  <a 
-                    {...props} 
-                    className="text-blue-400 hover:text-blue-300 transition-colors"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  />
-                ),
-                h1: ({ node, ...props }: any) => (
-                  <h1 {...props} className="text-xl font-bold mb-3 pb-2 border-b border-zinc-700/50 text-zinc-100" />
-                ),
-                h2: ({ node, ...props }: any) => (
-                  <h2 {...props} className="text-lg font-semibold mb-3 text-zinc-100" />
-                ),
-                h3: ({ node, ...props }: any) => (
-                  <h3 {...props} className="text-md font-medium mb-2 text-zinc-100" />
-                ),
-                p: ({ node, ...props }: any) => (
-                  <p {...props} className="mb-3 text-zinc-300 leading-relaxed" />
-                ),
-                ul: ({ node, ...props }: any) => (
-                  <ul {...props} className="list-disc pl-6 mb-3 space-y-1 text-zinc-300" />
-                ),
-                ol: ({ node, ...props }: any) => (
-                  <ol {...props} className="list-decimal pl-6 mb-3 space-y-1 text-zinc-300" />
-                ),
-                li: ({ node, ...props }: any) => (
-                  <li {...props} className="pl-1.5" />
-                ),
-                code: ({ node, inline, ...props }: any) => (
-                  inline 
-                    ? <code {...props} className="bg-zinc-700/50 px-1 py-0.5 rounded text-zinc-300" />
-                    : <code {...props} className="block bg-zinc-700/50 p-3 rounded-lg text-zinc-300 overflow-x-auto" />
-                ),
-                pre: ({ node, ...props }: any) => (
-                  <pre {...props} className="bg-zinc-700/50 p-3 rounded-lg text-zinc-300 overflow-x-auto mb-3" />
-                ),
-              }}
-            >
-              {content}
-            </ReactMarkdown>
-          </div>
         </div>
       </div>
     </div>
