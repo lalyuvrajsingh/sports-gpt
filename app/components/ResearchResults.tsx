@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { FiExternalLink, FiChevronDown, FiChevronUp, FiInfo } from 'react-icons/fi';
+import { FiExternalLink, FiChevronDown, FiChevronUp, FiInfo, FiLink, FiClock, FiArrowRight, FiEdit, FiCheckCircle, FiClipboard } from 'react-icons/fi';
 
 interface Source {
   title: string;
@@ -20,7 +20,7 @@ interface ResearchResultsProps {
 }
 
 /**
- * Component to display structured research results from Perplexity Sonar
+ * Component to display structured research results in a Perplexity-like format
  */
 export default function ResearchResults({ 
   content, 
@@ -33,6 +33,7 @@ export default function ResearchResults({
   const [showSourcePanel, setShowSourcePanel] = useState(true);
   const [showRawContent, setShowRawContent] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
+  const [copiedSnippet, setCopiedSnippet] = useState<number | null>(null);
   
   // Helper to extract domain from URL
   const getDomain = (url: string) => {
@@ -52,7 +53,7 @@ export default function ResearchResults({
     
     try {
       // Remove <think>...</think> sections which are internal instructions
-      const thinkRegex = /<think>[\s\S]*?<\/think>/;
+      const thinkRegex = /<think>[\s\S]*?<\/think>/g;
       return rawContent.replace(thinkRegex, '').trim();
     } catch (e) {
       console.error('Error cleaning content:', e);
@@ -60,9 +61,19 @@ export default function ResearchResults({
     }
   };
   
+  // Handle copying source snippets to clipboard
+  const handleCopySnippet = (index: number, text: string) => {
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        setCopiedSnippet(index);
+        setTimeout(() => setCopiedSnippet(null), 2000);
+      })
+      .catch(err => console.error('Failed to copy:', err));
+  };
+  
   if (!content || content.trim() === '') {
     return (
-      <div className="w-full p-4 border border-red-200 dark:border-red-800 rounded-md bg-red-50 dark:bg-red-900/20">
+      <div className="w-full p-4 border border-red-200 dark:border-red-800 rounded-lg bg-red-50 dark:bg-red-900/20">
         <p className="text-red-700 dark:text-red-300">No research content available.</p>
       </div>
     );
@@ -70,44 +81,100 @@ export default function ResearchResults({
   
   const processedContent = cleanContent(content);
   
+  // Format a timestamp for now to mimic Perplexity's "last updated" display
+  const formattedTimestamp = new Date().toLocaleString('en-US', {
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: true
+  });
+  
   return (
-    <div className="w-full">
-      {/* Debug toggle */}
-      <div className="w-full flex justify-end mb-2">
-        <button 
-          onClick={() => setShowDebug(!showDebug)}
-          className="text-xs px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded flex items-center gap-1"
-        >
-          <FiInfo size={12} /> {showDebug ? 'Hide Debug' : 'Show Debug'}
-        </button>
+    <div className="w-full max-w-3xl mx-auto animate-fade-in">
+      {/* Header with timestamp and controls */}
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-blue-600/10 rounded-full flex items-center justify-center">
+            <FiInfo className="text-blue-500" size={16} />
+          </div>
+          <div>
+            <div className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
+              <FiClock size={12} />
+              <span>Updated {formattedTimestamp}</span>
+            </div>
+          </div>
+        </div>
         
-        <button 
-          onClick={() => setShowRawContent(!showRawContent)}
-          className="text-xs px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded ml-2"
-        >
-          {showRawContent ? 'Show Formatted' : 'Show Raw'}
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => setShowDebug(!showDebug)}
+            className="text-xs px-2 py-1 bg-zinc-800/70 text-zinc-300 rounded hover:bg-zinc-700 transition-colors"
+          >
+            {showDebug ? 'Hide Debug' : 'Debug'}
+          </button>
+          
+          <button 
+            onClick={() => setShowRawContent(!showRawContent)}
+            className="text-xs px-2 py-1 bg-zinc-800/70 text-zinc-300 rounded hover:bg-zinc-700 transition-colors"
+          >
+            {showRawContent ? 'Show Formatted' : 'Show Raw'}
+          </button>
+        </div>
       </div>
+      
+      {/* Source Pills - shown at the top like Perplexity */}
+      {sources && sources.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {sources.slice(0, 3).map((source, index) => (
+            <a 
+              key={index} 
+              href={source.url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center px-3 py-1 rounded-full bg-zinc-800/60 text-xs hover:bg-zinc-700 transition-colors"
+            >
+              <FiLink size={10} className="mr-1.5 text-blue-400" />
+              <span className="max-w-[160px] truncate">{getDomain(source.url)}</span>
+            </a>
+          ))}
+          {sources.length > 3 && (
+            <button 
+              onClick={() => setShowSourcePanel(!showSourcePanel)}
+              className="inline-flex items-center px-3 py-1 rounded-full bg-zinc-800/60 text-xs hover:bg-zinc-700 transition-colors"
+            >
+              +{sources.length - 3} more
+            </button>
+          )}
+        </div>
+      )}
       
       {/* Debug Info */}
       {showDebug && (
-        <div className="w-full p-4 mb-4 border border-blue-200 dark:border-blue-800 rounded-md bg-blue-50 dark:bg-blue-900/20 text-xs font-mono">
-          <h3 className="font-bold mb-2">Debug Information:</h3>
-          <ul>
-            <li>Content Length: {content?.length || 0} characters</li>
-            <li>Processed Content Length: {processedContent?.length || 0} characters</li>
-            <li>Sources: {sources?.length || 0}</li>
-            <li>Query: {query || 'N/A'}</li>
-          </ul>
+        <div className="w-full p-3 mb-4 border border-blue-900/30 rounded-lg bg-blue-900/20 text-xs font-mono">
+          <h3 className="font-bold mb-2 text-blue-400">Debug Information:</h3>
+          <div className="grid grid-cols-2 gap-2">
+            <div><span className="text-zinc-400">Content Length:</span> {content?.length || 0}</div>
+            <div><span className="text-zinc-400">Clean Content:</span> {processedContent?.length || 0}</div>
+            <div><span className="text-zinc-400">Sources:</span> {sources?.length || 0}</div>
+            <div><span className="text-zinc-400">Search Queries:</span> {searchQueries?.length || 0}</div>
+            <div className="col-span-2"><span className="text-zinc-400">Query:</span> {query || 'N/A'}</div>
+          </div>
         </div>
       )}
       
       {/* Main Content */}
       <div className="w-full">
         {showRawContent ? (
-          <div className="prose dark:prose-invert w-full max-w-none border border-gray-200 dark:border-gray-700 rounded-md p-4">
-            <h2 className="text-xl font-bold mb-4">Raw Research Results</h2>
-            <pre className="whitespace-pre-wrap bg-gray-100 dark:bg-gray-800 p-4 rounded-md text-sm overflow-auto">
+          <div className="border border-zinc-800 rounded-lg p-4 bg-zinc-900/50">
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="text-lg font-semibold text-zinc-200">Raw Content</h2>
+              <button 
+                onClick={() => navigator.clipboard.writeText(processedContent)}
+                className="text-xs px-2 py-1 bg-zinc-800 text-zinc-400 rounded hover:bg-zinc-700 hover:text-zinc-300 transition-colors flex items-center gap-1"
+              >
+                <FiClipboard size={12} /> Copy
+              </button>
+            </div>
+            <pre className="whitespace-pre-wrap bg-zinc-800/70 p-4 rounded-lg text-sm overflow-auto max-h-[400px] text-zinc-300">
               {processedContent}
             </pre>
           </div>
@@ -116,9 +183,9 @@ export default function ResearchResults({
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
-                h1: ({ children }) => <h1 className="text-2xl font-semibold mb-4">{children}</h1>,
-                h2: ({ children }) => <h2 className="text-xl font-semibold mt-6 mb-3">{children}</h2>,
-                h3: ({ children }) => <h3 className="text-lg font-medium mt-5 mb-2">{children}</h3>,
+                h1: ({ children }) => <h1 className="text-2xl font-semibold mb-4 mt-6">{children}</h1>,
+                h2: ({ children }) => <h2 className="text-xl font-semibold mt-8 mb-3">{children}</h2>,
+                h3: ({ children }) => <h3 className="text-lg font-medium mt-6 mb-2">{children}</h3>,
                 p: ({ children }) => <p className="mb-4 leading-relaxed">{children}</p>,
                 ul: ({ children }) => <ul className="mb-4 pl-6 list-disc">{children}</ul>,
                 ol: ({ children }) => <ol className="mb-4 pl-6 list-decimal">{children}</ol>,
@@ -128,26 +195,33 @@ export default function ResearchResults({
                     href={href} 
                     target="_blank" 
                     rel="noopener noreferrer" 
-                    className="text-blue-600 hover:underline"
+                    className="text-blue-400 hover:underline inline-flex items-center"
                   >
                     {children}
+                    <FiExternalLink className="ml-1 inline-block" size={12} />
                   </a>
                 ),
                 table: ({ children }) => (
-                  <div className="overflow-x-auto my-4 rounded border border-zinc-200 dark:border-zinc-700">
-                    <table className="cricket-stats-table w-full">{children}</table>
+                  <div className="overflow-x-auto my-4 rounded-lg border border-zinc-700">
+                    <table className="w-full text-sm">{children}</table>
                   </div>
+                ),
+                th: ({ children }) => (
+                  <th className="bg-zinc-800 p-2 text-left font-medium">{children}</th>
+                ),
+                td: ({ children }) => (
+                  <td className="border-t border-zinc-700 p-2">{children}</td>
                 ),
                 code: ({ node, className, children, ...props }) => {
                   // Check if this is an inline code block based on the parent node
                   const isInline = !className && !props.hasOwnProperty('data-language');
                   
                   if (isInline) {
-                    return <code className="px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 rounded text-sm">{children}</code>;
+                    return <code className="px-1.5 py-0.5 bg-zinc-800 rounded text-sm">{children}</code>;
                   }
                   return (
                     <div className="relative mt-4 mb-6">
-                      <pre className="p-4 rounded-md bg-zinc-100 dark:bg-zinc-800 overflow-auto">
+                      <pre className="p-4 rounded-lg bg-zinc-800 overflow-auto">
                         <code className={className} {...props}>{children}</code>
                       </pre>
                     </div>
@@ -160,70 +234,75 @@ export default function ResearchResults({
           </div>
         )}
         
-        {/* Sources Panel - Always show this section even when there are no sources */}
-        <div className="mt-8 border-t border-zinc-200 dark:border-zinc-800 pt-4">
-          <div className="flex items-center justify-between mb-4">
-            <button 
-              onClick={() => setShowSourcePanel(!showSourcePanel)}
-              className="flex items-center gap-1 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100"
-            >
-              Sources {sources && sources.length > 0 ? `(${sources.length})` : '(0)'}
-              {showSourcePanel ? <FiChevronUp size={16} /> : <FiChevronDown size={16} />}
-            </button>
-            
-            {sources && sources.length > 3 && showSourcePanel && (
-              <button
-                onClick={() => setShowAllSources(!showAllSources)}
-                className="text-sm text-blue-600 hover:text-blue-700 dark:hover:text-blue-400 transition-colors"
+        {/* Sources Panel - improved Perplexity style */}
+        {sources && sources.length > 0 && (
+          <div className="mt-6 pt-4 border-t border-zinc-800">
+            <div className="flex items-center justify-between mb-3">
+              <button 
+                onClick={() => setShowSourcePanel(!showSourcePanel)}
+                className="flex items-center gap-1 text-zinc-200 font-medium hover:text-zinc-100"
               >
-                {showAllSources ? 'Show less' : 'View all sources'}
+                Sources {sources.length > 0 && `(${sources.length})`}
+                {showSourcePanel ? <FiChevronUp size={16} /> : <FiChevronDown size={16} />}
               </button>
-            )}
-          </div>
-          
-          {showSourcePanel && (
-            <div className="space-y-4">
-              {visibleSources && visibleSources.length > 0 ? (
-                visibleSources.map((source, index) => (
-                  <div key={index} className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-medium line-clamp-1 text-zinc-900 dark:text-zinc-100">
-                        {source.title}
-                      </h3>
-                      <a 
-                        href={source.url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-blue-600 p-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
-                      >
-                        <FiExternalLink size={16} />
-                      </a>
-                    </div>
-                    <div className="text-sm text-zinc-500 dark:text-zinc-400 mb-2">
-                      {getDomain(source.url)}
-                    </div>
-                    <p className="text-sm text-zinc-700 dark:text-zinc-300 line-clamp-2">
-                      {source.snippet}
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <div className="text-sm text-zinc-500 dark:text-zinc-400 p-4 border border-zinc-200 dark:border-zinc-800 rounded-lg">
-                  No sources were provided for this research. The content was generated based on the model's knowledge.
-                </div>
-              )}
               
-              {!showAllSources && sources && sources.length > 3 && (
+              {sources.length > 3 && showSourcePanel && (
                 <button
-                  onClick={() => setShowAllSources(true)}
-                  className="w-full py-2 border border-zinc-200 dark:border-zinc-800 rounded-lg text-center text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-sm font-medium"
+                  onClick={() => setShowAllSources(!showAllSources)}
+                  className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
                 >
-                  View {sources.length - 3} more sources
+                  {showAllSources ? 'Show fewer' : 'View all sources'}
+                  {!showAllSources && <FiArrowRight size={12} />}
                 </button>
               )}
             </div>
-          )}
-        </div>
+            
+            {showSourcePanel && (
+              <div className="space-y-3 mt-3">
+                {visibleSources && visibleSources.length > 0 ? (
+                  visibleSources.map((source, index) => (
+                    <div 
+                      key={index} 
+                      className="p-3 rounded-lg border border-zinc-800 bg-zinc-900/30 hover:bg-zinc-800/50 transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <a 
+                          href={source.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-blue-400 hover:underline line-clamp-1 flex items-center gap-1"
+                        >
+                          {source.title || getDomain(source.url)}
+                          <FiExternalLink size={12} />
+                        </a>
+                        <span className="text-xs text-zinc-500 flex-shrink-0">
+                          {getDomain(source.url)}
+                        </span>
+                      </div>
+                      <div className="relative">
+                        <p className="text-sm text-zinc-300 line-clamp-2">
+                          {source.snippet || 'No snippet available'}
+                        </p>
+                        <button 
+                          onClick={() => handleCopySnippet(index, source.snippet)}
+                          className="absolute right-0 bottom-0 text-zinc-500 hover:text-zinc-300"
+                          title={copiedSnippet === index ? "Copied!" : "Copy snippet"}
+                        >
+                          {copiedSnippet === index ? 
+                            <FiCheckCircle size={14} className="text-green-500" /> : 
+                            <FiClipboard size={14} />
+                          }
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-zinc-400 text-sm italic">No sources available</div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

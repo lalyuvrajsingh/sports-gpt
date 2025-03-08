@@ -63,10 +63,10 @@ export default function ResearchButton({
     setIsResearching(true);
     simulateProgress();
     
-    // Set timeout for the entire operation
-    const TIMEOUT_MS = 2 * 60 * 1000; // 2 minutes
+    // Set timeout for the entire operation - increased to 5 minutes
+    const TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error("Research request timed out after 2 minutes")), TIMEOUT_MS);
+      setTimeout(() => reject(new Error("Research request timed out after 5 minutes")), TIMEOUT_MS);
     });
     
     try {
@@ -172,38 +172,36 @@ export default function ResearchButton({
   };
 
   return (
-    <div className="relative">
-      <button
-        onClick={handleResearch}
-        disabled={!query.trim() || isResearching}
-        className={`flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-          !query.trim() || isResearching 
-            ? 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400 cursor-not-allowed' 
-            : 'bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700'
-        }`}
-        title={isResearching ? "Researching..." : "Research this query"}
-      >
-        {isResearching ? (
-          <>
-            <FiLoader className="animate-spin mr-2" />
-            Researching
-          </>
-        ) : (
-          <>
-            <FiSearch className="mr-2" />
-            Research
-          </>
-        )}
-      </button>
+    <button
+      onClick={handleResearch}
+      disabled={!query.trim() || isResearching}
+      className={`flex items-center justify-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+        !query.trim() || isResearching 
+          ? 'bg-zinc-200 text-zinc-500 dark:bg-zinc-700 dark:text-zinc-400 cursor-not-allowed' 
+          : 'bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700'
+      }`}
+      title={isResearching ? "Researching..." : "Research this query"}
+    >
+      {isResearching ? (
+        <>
+          <FiLoader className="animate-spin mr-2" size={16} />
+          <span>Researching</span>
+        </>
+      ) : (
+        <>
+          <FiSearch className="mr-2" size={16} />
+          <span>Research</span>
+        </>
+      )}
       
       {isResearching && (
-        <div className="absolute left-0 bottom-0 w-full h-1 bg-gray-200 dark:bg-gray-700 rounded-b-md overflow-hidden">
+        <div className="absolute left-0 -bottom-1 w-full h-1 bg-zinc-200 dark:bg-zinc-700 overflow-hidden rounded-b-md">
           <div 
             className="h-full bg-blue-600 transition-all duration-300 ease-out"
             style={{ width: `${progress}%` }}
           />
         </div>
       )}
-    </div>
+    </button>
   );
 } 

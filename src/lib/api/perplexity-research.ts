@@ -125,7 +125,7 @@ ATTRIBUTION AND ACCURACY:
     searchQueries?: string[];
   }> {
     const startTime = Date.now();
-    const TIMEOUT_MS = 180000; // 3 minutes timeout for deep research
+    const TIMEOUT_MS = 300000; // 5 minutes timeout for deep research
     
     console.log(`[PerplexityClient] Starting deep research with ${TIMEOUT_MS}ms timeout on: "${query}"`);
     console.log(`[PerplexityClient] Using model: ${this.model}`);
