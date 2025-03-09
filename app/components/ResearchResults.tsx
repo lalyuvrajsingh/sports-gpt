@@ -1,282 +1,230 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { FiExternalLink, FiChevronDown, FiChevronUp, FiInfo, FiLink, FiClock, FiArrowRight, FiEdit, FiCheckCircle, FiClipboard, FiImage } from 'react-icons/fi';
-
-interface Source {
-  title: string;
-  url: string;
-  snippet: string;
-}
+import { MdOutlineContentCopy, MdDone } from 'react-icons/md';
+import { IoMdRefresh } from 'react-icons/io';
+import { ResearchResponse } from '@/src/types';
+import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
+import CricketChart, { CricketChartGrid } from './CricketCharts';
+import { findAndParseChartData, formatPlayerComparisonForRadar, formatCareerProgressionForLine, formatDistributionForPie } from '@/src/lib/utils/chartUtils';
 
 interface ResearchResultsProps {
   content: string;
-  sources: Source[];
-  images?: any[]; // Keep this for compatibility but won't use it
-  searchQueries?: string[];
-  query: string;
+  className?: string;
+  onRegenerate?: () => void;
+  loading?: boolean;
+  timestamp?: Date;
 }
 
-/**
- * Component to display structured research results in a Perplexity-like format
- */
-export default function ResearchResults({ 
-  content, 
-  sources = [], // Ensure sources has a default value
-  images = [],
-  searchQueries = [],
-  query = ''
-}: ResearchResultsProps) {
-  const [showRawContent, setShowRawContent] = useState(false);
-  const [showDebug, setShowDebug] = useState(false);
-  const [showSources, setShowSources] = useState(true);
-  const [showSourcePanel, setShowSourcePanel] = useState(true);
-  const [copiedSnippet, setCopiedSnippet] = useState<number | null>(null);
-  
-  // Helper to extract domain from URL
-  const getDomain = (url: string) => {
-    try {
-      const domain = new URL(url).hostname;
-      return domain.replace('www.', '');
-    } catch (e) {
-      return url;
-    }
-  };
-  
-  // Format a timestamp for now to mimic Perplexity's "last updated" display
-  const formattedTimestamp = new Date().toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: 'numeric',
-    hour12: true
+const ResearchResults: React.FC<ResearchResultsProps> = ({
+  content,
+  className = '',
+  onRegenerate,
+  loading = false,
+  timestamp,
+}) => {
+  const [copied, setCopied] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const [showCharts, setShowCharts] = useState(true);
+  const [chartData, setChartData] = useState<any>({
+    playerComparisons: [],
+    careerProgressions: [],
+    distributions: []
   });
-  
-  // Move cleanContent function before its usage in useMemo
-  const cleanContent = (rawContent: string) => {
-    // Remove <think> tags and their contents
-    return rawContent.replace(/<think>[\s\S]*?<\/think>/g, '');
+
+  // Clean content by removing the special chart markers while preserving the tables
+  const cleanContent = (text: string): string => {
+    // Replace chart code blocks with regular markdown tables
+    let cleaned = text
+      .replace(/```chart:player-comparison\s+/g, '\n\n')
+      .replace(/```chart:career-progression\s+/g, '\n\n')
+      .replace(/```chart:distribution\s+/g, '\n\n')
+      .replace(/```(?!\w+)/g, '\n\n');
+    
+    return cleaned;
   };
-  
+
+  // Process content with charts
   const processedContent = useMemo(() => {
+    if (!content) return '';
     return cleanContent(content);
   }, [content]);
-  
-  const handleCopySnippet = (index: number, text: string) => {
-    navigator.clipboard.writeText(text)
-      .then(() => {
-        setCopiedSnippet(index);
-        setTimeout(() => setCopiedSnippet(null), 3000);
-      })
-      .catch(err => console.error('Failed to copy:', err));
+
+  // Extract chart data when content changes
+  useEffect(() => {
+    if (content) {
+      const extractedCharts = findAndParseChartData(content);
+      setChartData(extractedCharts);
+    }
+  }, [content]);
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(content).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
   };
-  
-  const visibleSources = showSources ? sources : (sources || []).slice(0, 3);
-  
-  const renderContent = () => {
-    return (
-      <div className="prose dark:prose-invert prose-sm sm:prose-base max-w-none">
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          components={{
-            // Style table to be more readable
-            table: ({ node, ...props }) => (
-              <div className="overflow-x-auto my-4">
-                <table className="min-w-full divide-y divide-zinc-700" {...props} />
-              </div>
-            ),
-            // Style headings
-            h1: ({ node, ...props }) => <h1 className="text-xl font-bold mt-6 mb-4" {...props} />,
-            h2: ({ node, ...props }) => <h2 className="text-lg font-bold mt-5 mb-3" {...props} />,
-            h3: ({ node, ...props }) => <h3 className="text-md font-bold mt-4 mb-2" {...props} />,
-            // Style paragraphs
-            p: ({ node, ...props }) => <p className="mb-4 leading-relaxed" {...props} />,
-            // Style code blocks
-            pre: ({ node, ...props }) => (
-              <pre className="bg-zinc-800 rounded-lg p-3 my-4 overflow-x-auto" {...props} />
-            ),
-            // Style inline code
-            code: ({ node, className, children, ...props }) => {
-              // Check if it's inline code by testing if it has a className
-              const isInline = !className?.includes('language-');
-              return isInline ? (
-                <code className="bg-zinc-800 rounded px-1 py-0.5 text-sm" {...props}>
-                  {children}
-                </code>
-              ) : (
-                <code {...props}>{children}</code>
-              );
-            },
-            // Better link handling
-            a: ({href, children}) => {
-              return (
-                <a 
-                  href={href} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="text-blue-400 hover:underline inline-flex items-center"
-                >
-                  {children}
-                  <FiExternalLink className="ml-1 inline-block" size={12} />
-                </a>
-              );
-            },
-          }}
-        >
-          {processedContent}
-        </ReactMarkdown>
-      </div>
-    );
+
+  const toggleCollapsed = () => {
+    setCollapsed(!collapsed);
   };
-  
-  return (
-    <div className="bg-zinc-900 rounded-lg overflow-hidden shadow-xl w-full">
-      {/* Header with controls */}
-      <div className="border-b border-zinc-800 px-6 py-4 flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => setShowSources(!showSources)}
-            className="text-sm flex items-center gap-1 text-gray-400 hover:text-white"
-          >
-            <FiLink size={14} />
-            <span>{showSources ? 'Hide' : 'Show'} Sources</span>
-            {showSources ? <FiChevronUp size={14} /> : <FiChevronDown size={14} />}
-          </button>
+
+  // Render charts based on extracted data
+  const renderCharts = () => {
+    const chartElements: React.ReactNode[] = [];
+    
+    // Add player comparison radar charts
+    if (chartData.playerComparisons && Array.isArray(chartData.playerComparisons)) {
+      chartData.playerComparisons.forEach((comparison: any, index: number) => {
+        // Convert player data to radar format
+        const radarData = comparison.data.map((player: any) => {
+          const dataPoint: any = { subject: player.name };
+          comparison.metrics.forEach((metric: string) => {
+            const key = metric.toLowerCase().replace(/\s+/g, '');
+            dataPoint[player.name] = player[key] || 0;
+          });
+          return dataPoint;
+        });
+        
+        chartElements.push(
+          <CricketChart
+            key={`player-comparison-${index}`}
+            chartType="radar"
+            data={radarData}
+            title={`Player Comparison: ${comparison.players.join(' vs ')}`}
+            keys={comparison.players}
+            height={350}
+          />
+        );
+      });
+    }
+    
+    // Add career progression line charts
+    if (chartData.careerProgressions && Array.isArray(chartData.careerProgressions)) {
+      chartData.careerProgressions.forEach((progression: any, index: number) => {
+        progression.metrics.forEach((metric: string, metricIndex: number) => {
+          // Convert progression data to line format
+          const lineData = progression.data.map((period: any) => ({
+            name: period.period,
+            [metric]: period[metric.toLowerCase().replace(/\s+/g, '')] || 0
+          }));
           
-          {/* Only show debug controls if there's debug info */}
-          {searchQueries && searchQueries.length > 0 && (
-            <button 
-              onClick={() => setShowDebug(!showDebug)}
-              className="text-sm flex items-center gap-1 text-gray-400 hover:text-white"
-            >
-              <FiInfo size={14} />
-              <span>{showDebug ? 'Hide' : 'Show'} Debug</span>
-              {showDebug ? <FiChevronUp size={14} /> : <FiChevronDown size={14} />}
-            </button>
-          )}
-          
+          chartElements.push(
+            <CricketChart
+              key={`career-progression-${index}-${metricIndex}`}
+              chartType="line"
+              data={lineData}
+              title={`${metric} Over Time`}
+              xAxisLabel="Period"
+              yAxisLabel={metric}
+              height={300}
+            />
+          );
+        });
+      });
+    }
+    
+    // Add distribution pie charts
+    if (chartData.distributions && Array.isArray(chartData.distributions)) {
+      chartData.distributions.forEach((distribution: any, index: number) => {
+        // Convert distribution data to pie format
+        const pieData = distribution.data.map((item: any) => ({
+          name: item.category,
+          value: item.value
+        }));
+        
+        chartElements.push(
+          <CricketChart
+            key={`distribution-${index}`}
+            chartType="pie"
+            data={pieData}
+            title={`Distribution: ${distribution.categories[0].split(' ')[0]}`}
+            height={300}
+          />
+        );
+      });
+    }
+    
+    return chartElements.length > 0 ? (
+      <div className="my-6">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-medium text-white">Data Visualizations</h3>
           <button 
-            onClick={() => setShowRawContent(!showRawContent)}
-            className="text-sm flex items-center gap-1 text-gray-400 hover:text-white"
+            className="text-sm text-gray-400 hover:text-white transition-colors"
+            onClick={() => setShowCharts(!showCharts)}
           >
-            <FiEdit size={14} />
-            <span>{showRawContent ? 'View Formatted' : 'View Raw'}</span>
+            {showCharts ? 'Hide Charts' : 'Show Charts'}
           </button>
         </div>
         
-        <div className="flex items-center text-gray-400 text-sm">
-          <FiClock size={14} className="mr-1" />
-          <span>Last updated: {formattedTimestamp}</span>
-        </div>
-      </div>
-      
-      {/* Source Pills - Perplexity Style */}
-      {showSources && sources.length > 0 && (
-        <div className="px-6 py-4 border-b border-zinc-800">
-          <div className="flex flex-wrap gap-2">
-            {sources.slice(0, 5).map((source, index) => (
-              <a 
-                href={source.url} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                key={index}
-                className="inline-flex items-center px-3 py-1.5 rounded-full bg-zinc-800 hover:bg-zinc-700 text-sm text-gray-300 transition-colors"
-              >
-                <span className="w-4 h-4 mr-2 rounded overflow-hidden flex items-center justify-center bg-zinc-700">
-                  {source.url.includes('cricbuzz') ? 'C' : 
-                   source.url.includes('espncricinfo') ? 'E' :
-                   source.url.includes('icc-cricket') ? 'I' :
-                   getDomain(source.url).charAt(0).toUpperCase()}
-                </span>
-                {getDomain(source.url)}
-              </a>
-            ))}
-            {sources.length > 5 && (
-              <button className="inline-flex items-center px-3 py-1 rounded-full bg-zinc-800 hover:bg-zinc-700 text-sm text-gray-300">
-                +{sources.length - 5} more
-              </button>
-            )}
-          </div>
-          
-          <div className="mt-2 text-xs text-gray-500">
-            {sources.length} {sources.length === 1 ? 'source' : 'sources'}
-          </div>
-        </div>
-      )}
-      
-      {/* Debug Info (if enabled) */}
-      {showDebug && searchQueries && searchQueries.length > 0 && (
-        <div className="px-6 py-3 border-b border-zinc-800 bg-zinc-950 text-xs">
-          <div className="font-medium text-gray-400 mb-1">Search Queries:</div>
-          <div className="text-gray-500">
-            {searchQueries.map((query, i) => (
-              <div key={i} className="mb-1 last:mb-0">
-                <span className="text-blue-400">#{i+1}:</span> {query}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      
-      {/* Main Content */}
-      <div className="p-6">
-        {showRawContent ? (
-          <div className="bg-zinc-800 p-4 rounded-lg overflow-auto">
-            <pre className="text-gray-300 whitespace-pre-wrap text-sm font-mono">
-              {content}
-            </pre>
-          </div>
-        ) : (
-          renderContent()
+        {showCharts && (
+          <CricketChartGrid>
+            {chartElements}
+          </CricketChartGrid>
         )}
       </div>
-      
-      {/* Sources Panel (Detailed) */}
-      {showSources && sources.length > 0 && (
-        <div className="mt-4 border-t border-zinc-800 p-6">
-          <div className="flex items-center mb-4">
-            <FiClipboard className="mr-2 text-gray-400" size={18} />
-            <h3 className="text-lg font-medium text-gray-300">Sources</h3>
-          </div>
-          <div className="space-y-4">
-            {sources.map((source, index) => (
-              <div key={index} className="group">
-                <div className="flex justify-between">
-                  <a 
-                    href={source.url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-blue-400 hover:underline flex items-start mb-1 group-hover:text-blue-300"
-                  >
-                    <span className="w-5 h-5 mr-2 rounded overflow-hidden flex items-center justify-center bg-zinc-800 text-xs shrink-0 mt-0.5">
-                      {source.url.includes('cricbuzz') ? 'C' : 
-                       source.url.includes('espncricinfo') ? 'E' :
-                       source.url.includes('icc-cricket') ? 'I' :
-                       getDomain(source.url).charAt(0).toUpperCase()}
-                    </span>
-                    <span className="truncate">{source.title || getDomain(source.url)}</span>
-                    <FiExternalLink size={14} className="ml-1 flex-shrink-0 opacity-0 group-hover:opacity-100" />
-                  </a>
-                  <button 
-                    onClick={() => handleCopySnippet(index, source.snippet)}
-                    className="text-gray-500 hover:text-white p-1 rounded"
-                    title="Copy snippet"
-                  >
-                    {copiedSnippet === index ? <FiCheckCircle size={16} className="text-green-500" /> : <FiClipboard size={16} />}
-                  </button>
-                </div>
-                <p className="text-gray-400 text-sm pl-7">
-                  {source.snippet.length > 200 
-                    ? `${source.snippet.substring(0, 200)}...` 
-                    : source.snippet}
-                </p>
-              </div>
-            ))}
-          </div>
+    ) : null;
+  };
+
+  return (
+    <div className={`relative bg-zinc-900 p-4 rounded-lg overflow-hidden ${className}`}>
+      <div className="flex justify-between items-center mb-3">
+        <button
+          onClick={toggleCollapsed}
+          className="flex items-center gap-1 text-sm font-medium text-zinc-400 hover:text-white transition-colors"
+        >
+          <span>Research Results</span>
+          {collapsed ? <ChevronDownIcon className="w-4 h-4" /> : <ChevronUpIcon className="w-4 h-4" />}
+        </button>
+        <div className="flex items-center gap-2">
+          {timestamp && (
+            <span className="text-xs text-zinc-500">
+              {new Date(timestamp).toLocaleTimeString()}
+            </span>
+          )}
+          {onRegenerate && (
+            <button
+              onClick={onRegenerate}
+              disabled={loading}
+              className="p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors disabled:opacity-50"
+              title="Regenerate results"
+            >
+              <IoMdRefresh className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          )}
+          <button
+            onClick={copyToClipboard}
+            className="p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+            title="Copy to clipboard"
+          >
+            {copied ? <MdDone className="w-4 h-4 text-green-500" /> : <MdOutlineContentCopy className="w-4 h-4" />}
+          </button>
         </div>
+      </div>
+
+      {!collapsed && (
+        <>
+          {/* Visualizations section */}
+          {renderCharts()}
+          
+          {/* Markdown content */}
+          <div className="prose prose-invert max-w-none prose-headings:mb-2 prose-headings:mt-4 prose-p:my-2 prose-hr:my-4 prose-img:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-table:my-2">
+            {loading ? (
+              <div className="h-6 w-full bg-zinc-800 animate-pulse rounded mb-2"></div>
+            ) : (
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+              >
+                {processedContent}
+              </ReactMarkdown>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
-} 
+};
+
+export default ResearchResults; 
