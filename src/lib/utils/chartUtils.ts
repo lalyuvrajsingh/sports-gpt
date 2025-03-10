@@ -272,54 +272,100 @@ function normalizeValue(metric: string, value: number): number {
 }
 
 /**
+ * Extract chart insights from the content
+ * @param content - The markdown content containing chart insights
+ * @param chartType - The type of chart to look for insights
+ * @param index - The index of the chart (in case of multiple charts of the same type)
+ * @returns The insights text or null if not found
+ */
+export function extractChartInsights(content: string, chartType: string, index: number = 0): string | null {
+  // Regular expression to find insights after chart markers
+  const insightRegex = new RegExp(`\`\`\`chart:${chartType}[\\s\\S]+?\`\`\`\\s*Chart Insights:\\s*([^\\n]*(?:\\n(?!\\s*Chart Insights:|\\s*\`\`\`)[^\\n]*)*)`, 'g');
+  
+  let match;
+  let currentIndex = 0;
+  
+  // Find the nth match
+  while ((match = insightRegex.exec(content)) !== null) {
+    if (currentIndex === index && match[1]) {
+      return match[1].trim();
+    }
+    currentIndex++;
+  }
+  
+  return null;
+}
+
+/**
  * Finds and extracts chart data from markdown content
  * @param content - The markdown content with chart markers
  * @returns Object with parsed chart data
  */
 export function findAndParseChartData(content: string): {
-  playerComparisons: Array<{ metrics: string[]; players: string[]; data: PlayerStat[] }>;
-  careerProgressions: Array<{ periods: string[]; metrics: string[]; data: MatchStat[] }>;
-  distributions: Array<{ categories: string[]; values: number[]; data: TeamStat[] }>;
+  playerComparisons: Array<{ metrics: string[]; players: string[]; data: PlayerStat[]; insights?: string }>;
+  careerProgressions: Array<{ periods: string[]; metrics: string[]; data: MatchStat[]; insights?: string }>;
+  distributions: Array<{ categories: string[]; values: number[]; data: TeamStat[]; insights?: string }>;
 } {
-  const playerComparisons: Array<{ metrics: string[]; players: string[]; data: PlayerStat[] }> = [];
-  const careerProgressions: Array<{ periods: string[]; metrics: string[]; data: MatchStat[] }> = [];
-  const distributions: Array<{ categories: string[]; values: number[]; data: TeamStat[] }> = [];
+  const playerComparisons: Array<{ metrics: string[]; players: string[]; data: PlayerStat[]; insights?: string }> = [];
+  const careerProgressions: Array<{ periods: string[]; metrics: string[]; data: MatchStat[]; insights?: string }> = [];
+  const distributions: Array<{ categories: string[]; values: number[]; data: TeamStat[]; insights?: string }> = [];
   
   try {
     // Find player comparison charts
     const playerComparisonRegex = /```chart:player-comparison\s+([\s\S]+?)```/g;
     let match = playerComparisonRegex.exec(content);
+    let index = 0;
     while (match) {
       const tableText = match[1].trim();
       const chartData = extractPlayerComparisonFromTable(tableText);
       if (chartData.players.length > 0) {
-        playerComparisons.push(chartData);
+        // Extract insights for this chart
+        const insights = extractChartInsights(content, 'player-comparison', index);
+        playerComparisons.push({
+          ...chartData,
+          insights: insights || undefined
+        });
       }
       match = playerComparisonRegex.exec(content);
+      index++;
     }
     
     // Find career progression charts
     const careerProgressionRegex = /```chart:career-progression\s+([\s\S]+?)```/g;
     match = careerProgressionRegex.exec(content);
+    index = 0;
     while (match) {
       const tableText = match[1].trim();
       const chartData = extractCareerProgressionFromTable(tableText);
       if (chartData.periods.length > 0) {
-        careerProgressions.push(chartData);
+        // Extract insights for this chart
+        const insights = extractChartInsights(content, 'career-progression', index);
+        careerProgressions.push({
+          ...chartData,
+          insights: insights || undefined
+        });
       }
       match = careerProgressionRegex.exec(content);
+      index++;
     }
     
     // Find distribution charts
     const distributionRegex = /```chart:distribution\s+([\s\S]+?)```/g;
     match = distributionRegex.exec(content);
+    index = 0;
     while (match) {
       const tableText = match[1].trim();
       const chartData = extractDistributionFromTable(tableText);
       if (chartData.categories.length > 0) {
-        distributions.push(chartData);
+        // Extract insights for this chart
+        const insights = extractChartInsights(content, 'distribution', index);
+        distributions.push({
+          ...chartData,
+          insights: insights || undefined
+        });
       }
       match = distributionRegex.exec(content);
+      index++;
     }
   } catch (error) {
     console.error('Error parsing chart data from content:', error);

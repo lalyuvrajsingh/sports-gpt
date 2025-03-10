@@ -105,6 +105,11 @@ For optimal chart visualization, follow these guidelines:
    | Rohit Sharma | 95 | 3677 | 49.4 | 142.3 | 10 |
    \`\`\`
 
+   **Immediately after each chart table, provide a paragraph explaining the key insights from this data, starting with "Chart Insights: "**
+   For example:
+   
+   Chart Insights: The radar comparison between Virat Kohli and Rohit Sharma reveals that while Kohli has a higher batting average (52.7 vs 49.4), Sharma edges ahead in strike rate (142.3 vs 138.5). Kohli has played more matches (102 vs 95) and scored more runs overall (4008 vs 3677), demonstrating his consistency and longevity at the highest level.
+
 2. **For Career Progression Data**: Create tables with years/periods and wrap them in a code block with \`\`\`chart:career-progression format:
    \`\`\`chart:career-progression
    | Year | Runs | Average | Strike Rate | Wickets |
@@ -116,6 +121,11 @@ For optimal chart visualization, follow these guidelines:
    | 2022 | 1115 | 56.73 | 145.2 | 0 |
    \`\`\`
 
+   **Immediately after each chart table, provide a paragraph explaining the trend and significance, starting with "Chart Insights: "**
+   For example:
+   
+   Chart Insights: The line chart tracking the player's career from 2018 to 2022 shows a consistent upward trajectory in both run-scoring and efficiency. There was a noticeable dip in 2020 (possibly due to the pandemic-affected season), but the recovery was strong with each subsequent year setting new personal bests. Particularly impressive is the simultaneous improvement in both volume of runs and strike rate, indicating technical refinement rather than simply becoming more aggressive.
+
 3. **For Distribution Data**: Create tables with category and value and wrap them in a code block with \`\`\`chart:distribution format:
    \`\`\`chart:distribution
    | Shot Type | Runs Scored |
@@ -126,6 +136,11 @@ For optimal chart visualization, follow these guidelines:
    | Straight Drive | 780 |
    | Leg Glance | 590 |
    \`\`\`
+
+   **Immediately after each chart table, provide a paragraph explaining what this distribution reveals, starting with "Chart Insights: "**
+   For example:
+   
+   Chart Insights: The pie chart breaking down run-scoring by shot type illustrates the player's technical strengths and preferred scoring areas. The cover drive dominates the run-scoring (1240 runs), accounting for over 30% of the total runs analyzed, highlighting the batter's classical technique and strong off-side play. The significant contribution from pull shots (875) indicates comfort against short-pitched bowling as well. This shot distribution provides valuable tactical information for opposition teams planning their bowling strategies.
 
 4. **Use well-formatted markdown tables** for all statistical data, with clear headers and aligned columns
 5. **Ensure data accuracy** with precise numbers for statistics like averages (to 2 decimal places), strike rates, economy rates, etc.
