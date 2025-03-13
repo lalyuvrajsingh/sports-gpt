@@ -1,8 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import ChatUI from './components/ChatUI';
 import { FiGlobe, FiGithub, FiBook, FiInfo } from 'react-icons/fi';
+
+// Simple loading component for Suspense boundary
+function Loading() {
+  return (
+    <div className="flex items-center justify-center w-full h-screen">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+        <p className="mt-4 text-zinc-400">Loading CricketGPT...</p>
+      </div>
+    </div>
+  );
+}
 
 export default function Home() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -33,15 +45,12 @@ export default function Home() {
         </div>
       </header>
       
-        
-        {/* Main Content Area */}
-        
-          {/* Chat UI */}
-          <div className="px-4 py-2 md:p-0">
-            <ChatUI />
-          </div>
-        
-      
+      {/* Main Content Area */}
+      <div className="px-4 py-2 md:p-0">
+        <Suspense fallback={<Loading />}>
+          <ChatUI />
+        </Suspense>
+      </div>
     </main>
   );
 }

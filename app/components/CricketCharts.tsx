@@ -110,8 +110,8 @@ const CricketChart: React.FC<CricketChartProps> = ({
         <h3 className="text-base font-semibold text-center mb-2 text-zinc-200">{title}</h3>
       )}
       
-      <ResponsiveContainer width="100%" height={height}>
-        {chartType === 'bar' && (
+      {chartType === 'bar' && (
+        <ResponsiveContainer width="100%" height={height}>
           <BarChart
             data={data as BarChartData[]}
             margin={{ top: 10, right: 10, left: 10, bottom: 20 }}
@@ -152,9 +152,11 @@ const CricketChart: React.FC<CricketChartProps> = ({
               ))
             }
           </BarChart>
-        )}
+        </ResponsiveContainer>
+      )}
 
-        {chartType === 'line' && (
+      {chartType === 'line' && (
+        <ResponsiveContainer width="100%" height={height}>
           <LineChart
             data={data as LineChartData[]}
             margin={{ top: 10, right: 10, left: 10, bottom: 20 }}
@@ -201,9 +203,11 @@ const CricketChart: React.FC<CricketChartProps> = ({
               ))
             }
           </LineChart>
-        )}
+        </ResponsiveContainer>
+      )}
 
-        {chartType === 'pie' && (
+      {chartType === 'pie' && (
+        <ResponsiveContainer width="100%" height={height}>
           <PieChart>
             <Pie
               data={data as PieChartData[]}
@@ -225,8 +229,8 @@ const CricketChart: React.FC<CricketChartProps> = ({
               verticalAlign="bottom"
             />
           </PieChart>
-        )}
-      </ResponsiveContainer>
+        </ResponsiveContainer>
+      )}
       
       {/* Simple insight box */}
       {insights && (

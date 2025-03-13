@@ -1,113 +1,80 @@
-# Sports GPT
+# CricketGPT - AI-Powered Cricket Research
 
-A specialized, cricket-focused AI assistant that provides real-time updates, in-depth analysis, and comprehensive statistics for cricket matches, players, and tournaments.
+A Next.js application that provides comprehensive cricket information and analysis using AI research capabilities.
 
 ## Features
 
-- **Real-time Cricket Data**: Access live match scores, player statistics, and tournament information
-- **In-depth Analysis**: Get detailed insights and statistics about players and matches
-- **Advanced Query Capabilities**: Ask specific questions about cricket stats like "Total number of last overs bowled by Jasprit in IPL"
-- **Semantic Search**: Retrieves relevant information from the knowledge base
-- **Web Research**: Uses Perplexity Sonar API to fetch the latest cricket information
-
-## Architecture
-
-Sports GPT is built with a modern tech stack:
-
-- **Frontend**: Next.js with Vercel AI SDK and React
-- **LLM**: OpenAI (GPT-4)
-- **Vector Database**: Pinecone for knowledge retrieval
-- **Agent Framework**: LangChain and LangGraph for orchestrating complex queries
-- **Research API**: Perplexity Sonar API for real-time web research
-- **Sports Data**: Integration with cricket data providers
-
-The application follows an agent-based architecture where different tools and APIs are coordinated to provide comprehensive answers to user queries.
+- AI-powered cricket research using Perplexity's Sonar API
+- Real-time progress indicators for research tasks
+- Comprehensive information about cricket players, tournaments, and statistics
+- Clean, modern UI with light and dark mode support
+- Mobile-responsive design
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 18.18.0 or later
-- OpenAI API key
-- Pinecone account and API key
-- Perplexity API key
-- Sports API key (such as CricInfo API)
+- Node.js 18.x or higher
+- npm or yarn
 
 ### Installation
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/sports-gpt.git
+1. Clone the repository
+   ```
+   git clone <repository-url>
    cd sports-gpt
    ```
 
-2. Install dependencies:
-   ```bash
+2. Install dependencies
+   ```
    npm install
+   # or
+   yarn
    ```
 
-3. Set up environment variables:
-   - Create a `.env.local` file in the root directory
-   - Add the following variables:
+3. Configure environment variables
+   Create a `.env.local` file in the root directory with the following variables:
    ```
-   # OpenAI API Key
-   OPENAI_API_KEY=your_openai_api_key_here
-   
-   # Perplexity API Key
-   PERPLEXITY_API_KEY=your_perplexity_api_key_here
-   
-   # Pinecone Configuration
-   PINECONE_API_KEY=your_pinecone_api_key_here
-   PINECONE_ENVIRONMENT=your_pinecone_environment_here
-   PINECONE_INDEX_NAME=sports-gpt-index
-   
-   # Sports API Keys
-   SPORTS_API_KEY=your_sports_api_key_here
-   SPORTS_API_HOST=your_sports_api_host_here
-   
-   # Optional: Set this to control the model used
-   OPENAI_MODEL=gpt-4o
+   PERPLEXITY_API_KEY=your_api_key_here
    ```
 
-4. Run the development server:
-   ```bash
+4. Run the development server
+   ```
    npm run dev
+   # or
+   yarn dev
    ```
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser.
+5. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application
 
-## Usage
+## Deployment
 
-1. Type your cricket-related question in the chat input
-2. The AI will process your query, fetch relevant data, and provide a comprehensive answer
-3. You can ask follow-up questions to get more specific information
+### Deploying to Vercel
 
-Example queries:
-- "Who has scored the most centuries in ODI cricket?"
-- "What are Jasprit Bumrah's bowling stats in the last IPL season?"
-- "Show me live cricket match scores"
-- "How many times has India won the Cricket World Cup?"
+The easiest way to deploy this application is using Vercel:
 
-## Project Structure
+1. Create a Vercel account at [vercel.com](https://vercel.com)
+2. Install the Vercel CLI:
+   ```
+   npm install -g vercel
+   ```
+3. Run the deployment command from the project root:
+   ```
+   vercel
+   ```
+4. Follow the prompts to complete deployment
 
-```
-sports-gpt/
-├── app/                  # Next.js App Router
-│   ├── api/              # API routes
-│   │   └── chat/         # Chat API endpoint
-│   └── page.tsx          # Main page component
-├── src/
-│   ├── components/       # React components
-│   │   └── ChatUI.tsx    # Chat interface component
-│   └── lib/             # Application logic
-│       ├── agents/       # LangGraph agents
-│       ├── api/          # API client implementations
-│       ├── tools/        # LangChain tools
-│       └── vector-store/ # Pinecone vector store setup
-├── public/               # Static assets
-├── .env.local            # Environment variables (create this)
-└── package.json          # Project dependencies
-```
+Alternatively, you can connect your GitHub repository to Vercel for automatic deployments.
+
+### Environment Variables for Production
+
+Make sure to configure these environment variables in your Vercel project settings:
+
+- `PERPLEXITY_API_KEY`: Your Perplexity API key for production research capabilities
+
+## Mock Mode
+
+The application includes a mock mode that automatically activates when the Perplexity API key is not configured. This allows for testing and demonstration without requiring actual API credentials.
 
 ## Contributing
 

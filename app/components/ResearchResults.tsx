@@ -9,8 +9,15 @@ import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import CricketChart from './CricketCharts';
 import { findAndParseChartData } from '@/src/lib/utils/chartUtils';
 
-interface ResearchResultsProps {
+export interface ResearchResultsProps {
   content: string;
+  sources: {
+    title: string;
+    url: string;
+    snippet: string;
+  }[];
+  searchQueries?: string[];
+  query: string;
   className?: string;
   onRegenerate?: () => void;
   loading?: boolean;
@@ -19,6 +26,9 @@ interface ResearchResultsProps {
 
 const ResearchResults: React.FC<ResearchResultsProps> = ({
   content,
+  sources,
+  searchQueries,
+  query,
   className = '',
   onRegenerate,
   loading = false,
